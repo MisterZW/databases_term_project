@@ -1,0 +1,8 @@
+CREATE TABLE RAIL_LINE (
+
+	rail_ID			INTEGER,
+	speed_limit		SMALLINT,
+
+	CONSTRAINT	Rail_PK
+		PRIMARY KEY(rail_ID)
+)
