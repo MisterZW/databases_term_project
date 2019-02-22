@@ -1,5 +1,4 @@
 CREATE TABLE RAIL_LINE (
-
 	rail_ID			INTEGER,
 	speed_limit		SMALLINT,
 
@@ -31,4 +30,18 @@ CREATE TABLE STATION (
 
 	CONSTRAINT Station_PK
 		PRIMARY KEY(station_ID)
+);
+
+CREATE TABLE TRAIN (
+	train_ID		INTEGER,
+	top_speed		SMALLINT,
+	seats 			INTEGER,
+	ppm				NUMERIC(4, 2),
+
+	CONSTRAINT Train_PK
+		PRIMARY KEY(train_ID)
+);
+
+CREATE TABLE ROUTE (
+	route_ID		INTEGER PRIMARY KEY
 );
