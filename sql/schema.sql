@@ -83,3 +83,29 @@ CREATE TABLE SCHEDULE (
 	CONSTRAINT sched_PK
 		PRIMARY KEY(sched_ID)
 );
+
+CREATE TABLE BOOKINGS (
+	passenger		INTEGER,
+	schedule		INTEGER,
+	num_tickets		SMALLINT,
+
+	CONSTRAINT pass_book_FK
+		FOREIGN KEY(passenger) REFERENCES PASSENGER(customer_ID),
+	
+	CONSTRAINT sched_book_FK
+		FOREIGN KEY(schedule) REFERENCES SCHEDULE(sched_ID)
+);
+
+CREATE TABLE ROUTE_PATHS (
+	ordinal			SMALLINT,
+	direction		CHAR(1),
+	stops_here		BOOLEAN NOT NULL,
+	path_ID			INTEGER,
+	conn			INTEGER,
+
+	CONSTRAINT rp_FK
+		FOREIGN KEY(path_ID) REFERENCES ROUTE(route_ID),
+	
+	CONSTRAINT cp_FK
+		FOREIGN KEY(conn) REFERENCES CONNECTION(conn_ID)
+);
