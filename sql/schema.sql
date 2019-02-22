@@ -67,6 +67,7 @@ CREATE TABLE CONNECTION (
 );
 
 CREATE TABLE SCHEDULE (
+	sched_ID		INTEGER,
 	date			DATE,
 	time			TIME,
 	train			INTEGER,
@@ -80,5 +81,5 @@ CREATE TABLE SCHEDULE (
 		FOREIGN KEY(train_route) REFERENCES ROUTE(route_ID),
 
 	CONSTRAINT sched_PK
-		PRIMARY KEY(date, time, train_route)
+		PRIMARY KEY(sched_ID)
 );
