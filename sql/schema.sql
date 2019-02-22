@@ -45,3 +45,40 @@ CREATE TABLE TRAIN (
 CREATE TABLE ROUTE (
 	route_ID		INTEGER PRIMARY KEY
 );
+
+CREATE TABLE CONNECTION (
+	conn_ID			INTEGER,
+	station_1		INTEGER,
+	station_2		INTEGER,
+	rail			INTEGER,
+	distance		DECIMAL(6, 2),
+
+	CONSTRAINT S1_FK
+		FOREIGN KEY(station_1) REFERENCES STATION(station_ID),
+
+	CONSTRAINT S2_FK
+		FOREIGN KEY(station_2) REFERENCES STATION(station_ID),
+
+	CONSTRAINT rail_FK
+		FOREIGN KEY(rail) REFERENCES RAIL_LINE(rail_ID),
+
+	CONSTRAINT connection_PK
+		PRIMARY KEY(conn_ID)
+);
+
+CREATE TABLE SCHEDULE (
+	date			DATE,
+	time			TIME,
+	train			INTEGER,
+	tickets_sold	INTEGER,
+	train_route		INTEGER,
+
+	CONSTRAINT sched_train_FK
+		FOREIGN	KEY(train) REFERENCES TRAIN(train_ID),
+
+	CONSTRAINT sched_route_FK
+		FOREIGN KEY(train_route) REFERENCES ROUTE(route_ID),
+
+	CONSTRAINT sched_PK
+		PRIMARY KEY(date, time, train_route)
+);
