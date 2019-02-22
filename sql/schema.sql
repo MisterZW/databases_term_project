@@ -68,11 +68,11 @@ CREATE TABLE CONNECTION (
 
 CREATE TABLE SCHEDULE (
 	sched_ID		INTEGER,
-	date			DATE,
-	time			TIME,
+	sched_date		DATE,
+	sched_time		TIME,
 	train			INTEGER,
 	tickets_sold	INTEGER,
-	t_route		INTEGER,
+	t_route			INTEGER,
 
 	CONSTRAINT sched_train_FK
 		FOREIGN	KEY(train) REFERENCES TRAIN(train_ID),
