@@ -1,9 +1,8 @@
 CREATE TABLE TRAIN (
-	train_ID		INTEGER,
-	top_speed		SMALLINT,
-	seats 			INTEGER,
-	ppm				NUMERIC(4, 2),
+    train_ID        INT,
+    top_speed       SMALLINT,
+    seats           INT,
+    ppm             NUMERIC(4, 2),
 
-	CONSTRAINT Train_PK
-		PRIMARY KEY(train_ID)
+    CONSTRAINT Train_PK PRIMARY KEY(train_ID)
 );
