@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS PASSENGER CASCADE;
+
 CREATE TABLE PASSENGER (
     customer_ID     INT,
     first_name      VARCHAR(20),

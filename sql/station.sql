@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS STATION CASCADE;
+
 CREATE TABLE STATION (
     station_ID      INT,
     street_address  VARCHAR(50),

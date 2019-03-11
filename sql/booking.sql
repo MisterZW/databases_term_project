@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS BOOKINGS CASCADE;
+
 CREATE TABLE BOOKINGS (
     passenger       INT,
     schedule        INT,

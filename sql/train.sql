@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS TRAIN CASCADE;
+
 CREATE TABLE TRAIN (
     train_ID        INT,
     top_speed       SMALLINT,

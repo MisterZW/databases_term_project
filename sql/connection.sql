@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS CONNECTION CASCADE;
+
 CREATE TABLE CONNECTION (
     conn_ID         INT,
     station_1       INT,

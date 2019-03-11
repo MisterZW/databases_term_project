@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS SCHEDULE CASCADE;
+
 CREATE TABLE SCHEDULE (
     sched_ID        INT,
     sched_date      DATE,

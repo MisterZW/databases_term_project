@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS ROUTE_PATHS CASCADE;
+
 CREATE TABLE ROUTE_PATHS (
     ordinal         SMALLINT,
     direction       CHAR(1),
