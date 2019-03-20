@@ -2,8 +2,8 @@ from random import randint
 import random
 from datetime import datetime, time
 
-NUM_RAIL_LINES = 5
-NUM_STATIONS = 50
+NUM_RAIL_LINES = 20
+NUM_STATIONS = 100
 NUM_TRAINS = 350
 NUM_PASSENGERS = 300
 NUM_SCHEDULES = 2000
@@ -16,10 +16,10 @@ with open('trains.dat', 'w+') as train_file:
 	train_file.write('TRAIN\n')
 	for i in range(NUM_TRAINS):
 		train_ID = i
+		top_speed = 60 + randint(0, 15) * 5
 		seats = randint(150, 301)
 		ppm = (randint(1, 10) / 4.0)
-		top_speed = 60 + randint(0, 15) * 5
-		train = (train_ID, seats, ppm, top_speed)
+		train = (train_ID, top_speed, seats, ppm)
 		train_file.write( str(train) + '\n' )
 
 # build stations
@@ -65,3 +65,58 @@ with open('passenger.dat', 'w+') as passenger_file:
 		zip_code = '15217'
 		passenger = (cust_id, fname, lname, email, phone, address, city, zip_code)
 		passenger_file.write( str(passenger) + '\n' )
+
+# build rail lines
+with open('rail_lines.dat', 'w+') as rail_file:
+	rail_file.write('RAIL_LINE\n')
+	for i in range(NUM_RAIL_LINES):
+		rail_id = str(i)
+		speed_limit = 50 + randint(0, 15) * 5
+		rail = (rail_id, speed_limit)
+		rail_file.write( str(rail) + '\n' )
+
+# build routes
+with open('routes.dat', 'w+') as route_file:
+	route_file.write('TRAIN_ROUTE\n')
+	for i in range(NUM_ROUTES):
+		route_id = str(i)
+		description = 'This is route ' + str(i)
+		route = (route_id, description)
+		route_file.write( str(route) + '\n' )
+
+# build connections
+# build as a simple grid layout
+with open('connections.dat', 'w+') as conn_file:
+	conn_file.write('CONNECTION\n')
+	grid_width = (int)(NUM_RAIL_LINES / 2)
+	fractions = [.1, .2, .3, .4, .5, .6, .7, .8, .9]
+	for i in range(NUM_STATIONS):
+		#connect right
+		station1_id = i
+		
+		if (i+1) % grid_width == 0:
+			continue  # don't connect @ far right of grid
+		else:
+			station2_id = i+1
+
+		rail_id = (int)(i / grid_width)
+		distance = randint(5, 1000)
+		distance += random.choice(fractions)
+		connection = (i, station1_id, station2_id, rail_id, distance)
+		conn_file.write( str(connection) + '\n' )
+
+	for i in range(NUM_STATIONS):
+		#connect down
+		conn_id = i + NUM_STATIONS
+		station1_id = i
+
+		if(i + grid_width >= NUM_STATIONS):
+			continue  # don't connect @ bottom of grid
+		else:
+			station2_id = (i + grid_width)
+
+		rail_id = (int)(i % grid_width) + grid_width
+		distance = randint(5, 1000)
+		distance += random.choice(fractions)
+		connection = (conn_id, station1_id, station2_id, rail_id, distance)
+		conn_file.write( str(connection) + '\n' )
