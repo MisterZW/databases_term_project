@@ -1,4 +1,4 @@
-filenames = ['trains.dat']
+filenames = ['trains.dat', 'stations.dat', 'agents.dat']
 
 output = open('../sql/mock_data.sql', 'w+')
 
