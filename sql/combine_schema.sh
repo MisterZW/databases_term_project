@@ -10,3 +10,5 @@ cat passenger.sql >> schema.sql
 cat route_stations.sql >> schema.sql
 cat schedule.sql >> schema.sql
 cat booking.sql >> schema.sql
+
+cat triggers.sql >> schema.sql

@@ -1,5 +1,5 @@
 filenames = ['trains.dat', 'stations.dat', 'agents.dat', 'passenger.dat', 'rail_lines.dat',
-	'routes.dat', 'connections.dat']
+	'routes.dat', 'connections.dat', 'route_stations.dat']
 
 output = open('../sql/mock_data.sql', 'w+')
 

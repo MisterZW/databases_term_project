@@ -120,3 +120,40 @@ with open('connections.dat', 'w+') as conn_file:
 		distance += random.choice(fractions)
 		connection = (conn_id, station1_id, station2_id, rail_id, distance)
 		conn_file.write( str(connection) + '\n' )
+
+# build route_stations
+with open('route_stations.dat', 'w+') as rs_file:
+	rs_file.write('ROUTE_STATIONS\n')
+	grid_width = (int)(NUM_RAIL_LINES / 2)
+
+	# build horizontal routes
+	for i in range(NUM_STATIONS):
+		station_id = i
+		route_id = (int)(i / grid_width)
+		ordinal = (int)(i % grid_width)
+
+		if ordinal == 0 or ordinal == grid_width-1:
+			stops_here = True
+		elif randint(0,1) == 0:
+			stops_here = False
+		else:
+			stops_here = True
+		
+		entry = (ordinal, stops_here, station_id, route_id)
+		rs_file.write( str(entry) + '\n' )
+
+	# build vertical routes
+	for i in range(NUM_STATIONS):
+		station_id = i
+		route_id = (int)(i % grid_width) + grid_width
+		ordinal = (int)(i / grid_width)
+
+		if ordinal == 0 or ordinal == grid_width-1:
+			stops_here = True
+		elif randint(0,1) == 0:
+			stops_here = False
+		else:
+			stops_here = True
+		
+		entry = (ordinal, stops_here, station_id, route_id)
+		rs_file.write( str(entry) + '\n' )
