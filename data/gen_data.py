@@ -186,6 +186,7 @@ with open('schedules.dat', 'w+') as sched_file:
 with open('bookings.dat', 'w+') as book_file:
 	book_file.write('BOOKING\n')
 	while(sched_id >= 0):
+		sched_id -= 1
 		for i in range(5):
 			passenger_id = randint(0, NUM_PASSENGERS-1)
 			agent_username = 'agent' + str(randint(0, NUM_AGENTS-1))
@@ -193,6 +194,3 @@ with open('bookings.dat', 'w+') as book_file:
 
 			booking = (agent_username, passenger_id, sched_id, num_tickets)
 			book_file.write( str(booking) + '\n' )
-
-		sched_id -= 1
-
