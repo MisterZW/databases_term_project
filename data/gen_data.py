@@ -1,6 +1,6 @@
 from random import randint
 import random
-from datetime import datetime, time
+from datetime import datetime, time, date, timedelta
 
 NUM_RAIL_LINES = 20
 NUM_STATIONS = 100
@@ -157,3 +157,42 @@ with open('route_stations.dat', 'w+') as rs_file:
 		
 		entry = (ordinal, stops_here, station_id, route_id)
 		rs_file.write( str(entry) + '\n' )
+
+sched_id = 0
+
+# build schedules
+with open('schedules.dat', 'w+') as sched_file:
+	sched_file.write('SCHEDULE\n')
+	grid_width = (int)(NUM_RAIL_LINES / 2)
+
+	day = timedelta(days=1)
+
+	tomorrow = date.today() + day
+
+	tickets_sold = 0
+
+	for date_offset in range(7):
+		sched_date = tomorrow + (date_offset * day)
+		sched_time = time(hour = randint(10, 16))
+
+		for rail in range(NUM_RAIL_LINES):
+			train_id = rail
+			train_route = rail
+			sched = (sched_id, str(sched_date), str(sched_time), train_id, tickets_sold, train_route)
+			sched_file.write( str(sched) + '\n' )
+			sched_id += 1
+
+# build bookings
+with open('bookings.dat', 'w+') as book_file:
+	book_file.write('BOOKING\n')
+	while(sched_id >= 0):
+		for i in range(5):
+			passenger_id = randint(0, NUM_PASSENGERS-1)
+			agent_username = 'agent' + str(randint(0, NUM_AGENTS-1))
+			num_tickets = randint(0, 10)
+
+			booking = (agent_username, passenger_id, sched_id, num_tickets)
+			book_file.write( str(booking) + '\n' )
+
+		sched_id -= 1
+
