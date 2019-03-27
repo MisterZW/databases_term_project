@@ -122,12 +122,12 @@ with open('route_stations.dat', 'w+') as rs_file:
 	grid_width = (int)(NUM_RAIL_LINES / 2)
 
 	# build horizontal routes
-	for i in range(1, NUM_STATIONS+1):
-		station_id = i
+	for i in range(0, NUM_STATIONS):
+		station_id = i + 1
 		route_id = (int)(i / grid_width) + 1
-		ordinal = (int)(i % grid_width)
+		ordinal = (int)(i % grid_width) + 1
 
-		if ordinal == 0 or ordinal == grid_width-1:
+		if ordinal == 1 or ordinal == grid_width:
 			stops_here = True
 		elif randint(0,1) == 0:
 			stops_here = False
@@ -138,12 +138,12 @@ with open('route_stations.dat', 'w+') as rs_file:
 		rs_file.write( str(entry) + '\n' )
 
 	# build vertical routes
-	for i in range(1, NUM_STATIONS+1):
-		station_id = i
+	for i in range(0, NUM_STATIONS):
+		station_id = i + 1
 		route_id = (int)(i % grid_width) + grid_width + 1
-		ordinal = (int)(i / grid_width)
+		ordinal = (int)(i / grid_width) + 1
 
-		if ordinal == 0 or ordinal == grid_width-1:
+		if ordinal == 1 or ordinal == grid_width:
 			stops_here = True
 		elif randint(0,1) == 0:
 			stops_here = False
@@ -160,14 +160,16 @@ with open('schedules.dat', 'w+') as sched_file:
 	sched_file.write('SCHEDULE\n')
 	grid_width = (int)(NUM_RAIL_LINES / 2)
 
-	is_forward = True
-
 	for day in range(1, 7):
 		sched_time = time(hour = randint(10, 16))
 
 		for rail in range(1, NUM_RAIL_LINES + 1):
 			train_route = rail
 			train_id = rail
+			if randint(0, 1) == 0:
+				is_forward = True
+			else:
+				is_forward = False
 			sched = (day, str(sched_time), train_route, train_id, is_forward)
 			sched_file.write( str(sched) + '\n' )
 			sched_id += 1

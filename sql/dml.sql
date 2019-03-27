@@ -12,8 +12,9 @@ BEGIN
 							WHERE NOT EXISTS (SELECT DISTINCT s.train_id
 							FROM SCHEDULE AS s, ROUTE_STATIONS AS rs
 							WHERE s.train_id = t.train_id AND
-							s.t_route = rs.route_id AND 
-							rs.station_id = target_station);
+							s.t_route = rs.route_id AND
+							rs.station_id = target_station AND
+							rs.stops_here IS TRUE);
 END;
 $$
 LANGUAGE 'plpgsql';
@@ -22,14 +23,19 @@ LANGUAGE 'plpgsql';
 -- any stations that all the trains (that are in the system) pass at any
 -- time during an entire week.
 
-CREATE OR REPLACE FUNCTION stations_all_trains_visit()
+CREATE OR REPLACE FUNCTION stations_all_trains_pass_through()
 RETURNS TABLE (
 	station_id	INT
 )
 AS $$
 BEGIN
-	RETURN QUERY SELECT s.station_id FROM STATION as s
-				 WHERE NOT EXISTS ( SELECT trains_which_dont_go_here(s.station_id) );
+	RETURN QUERY SELECT st.station_id FROM STATION as st
+				 WHERE NOT EXISTS ( SELECT t.train_id FROM TRAIN as t
+									WHERE NOT EXISTS (SELECT DISTINCT s.train_id
+									FROM SCHEDULE AS s, ROUTE_STATIONS AS rs
+									WHERE s.train_id = t.train_id AND
+									s.t_route = rs.route_id AND
+									rs.station_id = st.station_id ) );
 END;
 $$
 LANGUAGE 'plpgsql';
@@ -99,24 +105,32 @@ LANGUAGE 'plpgsql';
 --	SET $$old_field = $$new_value
 --	WHERE customer_id = $$id;
 
-/*
 
 -- Find all routes that stop at a specified arrival station and then at the specified
 -- destination station on a specified day of the week
-CREATE OR REPLACE FUNCTION single_trip_route_search(arr_station SERIAL, dest_station SERIAL, day INT) 
+CREATE OR REPLACE FUNCTION single_trip_route_search(arr_st INT, dest_st INT, target_day INT) 
 RETURNS TABLE (
-	route_id	SERIAL
+	route_id	INT
 )
 AS $$
 BEGIN
-
-	
-
+	RETURN QUERY SELECT DISTINCT s.t_route FROM SCHEDULE AS s
+				 WHERE s.sched_day = target_day AND
+				 s.t_route IN 	(SELECT r1.route_id
+				 				FROM ROUTE_STATIONS AS r1, ROUTE_STATIONS AS r2
+				 				WHERE r1.route_id = r2.route_id
+				 				AND r1.station_id = arr_st
+				 				AND r2.station_id = dest_st
+				 				AND r1.stops_here IS TRUE
+				 				AND r2.stops_here IS TRUE
+				 				AND CASE WHEN s.is_forward IS TRUE
+				 					THEN r1.ordinal < r2.ordinal
+				 					ELSE r1.ordinal > r2.ordinal
+				 					END );
 END;
 $$
 LANGUAGE 'plpgsql';
 
-*/
 
 -- Find all trains that pass through a specific station at a specific
 -- day/time combination: Find the trains that pass through a specific
@@ -179,4 +193,3 @@ LANGUAGE 'plpgsql';
 
 -- Find the availability of a route at every stop on a specific day
 -- and time:
-
