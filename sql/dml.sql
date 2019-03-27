@@ -18,6 +18,15 @@
 -- entire week.
 
 -- Find routes that stop at least at XX% of the Stations they visit:
+	
+	-- PARAMETER -- target_percent between 10 and 90
+
+	SELECT DISTINCT route_id
+	FROM ROUTE_STATIONS as outside
+	WHERE (target_percent <= ((SELECT COUNT(station_id) from ROUTE_STATIONS as inside
+							   	WHERE stops_here IS TRUE AND inside.route_id = outside.route_id) * 100 / 
+								SELECT COUNT(station_id) from ROUTE_STATIONS as inside2
+								WHERE inside2.route_id = outside.route_id);
 
 -- Display the schedule of a route
 
