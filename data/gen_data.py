@@ -167,7 +167,8 @@ with open('schedules.dat', 'w+') as sched_file:
 
 		for rail in range(1, NUM_RAIL_LINES + 1):
 			train_route = rail
-			sched = (day, str(sched_time), train_route, is_forward)
+			train_id = rail
+			sched = (day, str(sched_time), train_route, train_id, is_forward)
 			sched_file.write( str(sched) + '\n' )
 			sched_id += 1
 
@@ -182,7 +183,7 @@ with open('trips.dat', 'w+') as trip_file:
 		trip_date = tomorrow
 		for rail in range(1, NUM_RAIL_LINES + 1):
 			train_id = rail
-			trip = (i, train_id, str(trip_date))
+			trip = (i, str(trip_date))
 			trip_file.write(str(trip) +'\n')
 			
 

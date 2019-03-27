@@ -99,11 +99,15 @@ CREATE TABLE SCHEDULE (
     sched_day       INT, -- enum value 1 - 7
     sched_time      TIME,
     t_route         SERIAL,
+    train_id		SERIAL,
     is_forward      BOOLEAN,
     sched_id        SERIAL,
 
     CONSTRAINT sched_route_FK
         FOREIGN KEY(t_route) REFERENCES TRAIN_ROUTE(route_id),
+
+    CONSTRAINT trip_train_fk 
+		FOREIGN KEY(train_id) REFERENCES TRAIN(train_id),
 
     CONSTRAINT sched_PK PRIMARY KEY(sched_id),
 
@@ -114,17 +118,13 @@ DROP TABLE IF EXISTS TRIP CASCADE;
 CREATE TABLE TRIP (
 	
 	sched_id	SERIAL,
-	train_id	SERIAL,
 	trip_date	date,
 	trip_id		SERIAL,
 
 	CONSTRAINT trip_pk PRIMARY KEY (trip_id),
 
 	CONSTRAINT trip_sched_fk 
-		FOREIGN KEY(sched_id) REFERENCES SCHEDULE(sched_id),
-
-	CONSTRAINT trip_train_fk 
-		FOREIGN KEY(train_id) REFERENCES TRAIN(train_id)
+		FOREIGN KEY(sched_id) REFERENCES SCHEDULE(sched_id)
 
 );
 DROP TABLE IF EXISTS BOOKING CASCADE;

@@ -4,11 +4,15 @@ CREATE TABLE SCHEDULE (
     sched_day       INT, -- enum value 1 - 7
     sched_time      TIME,
     t_route         SERIAL,
+    train_id		SERIAL,
     is_forward      BOOLEAN,
     sched_id        SERIAL,
 
     CONSTRAINT sched_route_FK
         FOREIGN KEY(t_route) REFERENCES TRAIN_ROUTE(route_id),
+
+    CONSTRAINT trip_train_fk 
+		FOREIGN KEY(train_id) REFERENCES TRAIN(train_id),
 
     CONSTRAINT sched_PK PRIMARY KEY(sched_id),
 
