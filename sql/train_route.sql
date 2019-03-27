@@ -1,8 +1,8 @@
 DROP TABLE IF EXISTS TRAIN_ROUTE CASCADE;
 
 CREATE TABLE TRAIN_ROUTE (
-    route_ID        INT,
     description		VARCHAR(200),
+    route_ID        SERIAL,
     
-    CONSTRAINT r_PK PRIMARY KEY(route_ID)
+    CONSTRAINT r_PK PRIMARY KEY(route_id)
 );

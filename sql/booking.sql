@@ -3,15 +3,15 @@ DROP TABLE IF EXISTS BOOKING CASCADE;
 CREATE TABLE BOOKING (
 	agent			VARCHAR(40),
     passenger       INT,
-    schedule        INT,
+    trip            INT,
     num_tickets     SMALLINT,
 
     CONSTRAINT agent_FK
     	FOREIGN KEY(agent) REFERENCES AGENT(username),
 
     CONSTRAINT pass_book_FK
-        FOREIGN KEY(passenger) REFERENCES PASSENGER(customer_ID),
+        FOREIGN KEY(passenger) REFERENCES PASSENGER(customer_id),
     
     CONSTRAINT sched_book_FK
-        FOREIGN KEY(schedule) REFERENCES SCHEDULE(sched_ID)
+        FOREIGN KEY(trip) REFERENCES TRIP(trip_id)
 );

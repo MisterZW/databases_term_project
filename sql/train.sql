@@ -1,10 +1,10 @@
 DROP TABLE IF EXISTS TRAIN CASCADE;
 
 CREATE TABLE TRAIN (
-    train_ID        INT,
     top_speed       SMALLINT,
     seats           INT,
     ppm             NUMERIC(4, 2),
+    train_id        SERIAL,
 
-    CONSTRAINT Train_PK PRIMARY KEY(train_ID)
+    CONSTRAINT Train_PK PRIMARY KEY(train_id)
 );

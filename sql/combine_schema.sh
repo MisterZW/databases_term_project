@@ -9,6 +9,7 @@ cat connection.sql >> schema.sql
 cat passenger.sql >> schema.sql
 cat route_stations.sql >> schema.sql
 cat schedule.sql >> schema.sql
+cat trip.sql >> schema.sql
 cat booking.sql >> schema.sql
 
-cat triggers.sql >> schema.sql
+# cat triggers.sql >> schema.sql

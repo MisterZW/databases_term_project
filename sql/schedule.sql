@@ -1,18 +1,16 @@
 DROP TABLE IF EXISTS SCHEDULE CASCADE;
 
 CREATE TABLE SCHEDULE (
-    sched_ID        INT,
-    sched_date      DATE,
+    sched_day       INT, -- enum value 1 - 7
     sched_time      TIME,
-    train           INT,
-    tickets_sold    INT,
-    t_route         INT,
-
-    CONSTRAINT sched_train_FK
-        FOREIGN KEY(train) REFERENCES TRAIN(train_ID),
+    t_route         SERIAL,
+    is_forward      BOOLEAN,
+    sched_id        SERIAL,
 
     CONSTRAINT sched_route_FK
-        FOREIGN KEY(t_route) REFERENCES TRAIN_ROUTE(route_ID),
+        FOREIGN KEY(t_route) REFERENCES TRAIN_ROUTE(route_id),
 
-    CONSTRAINT sched_PK PRIMARY KEY(sched_ID)
+    CONSTRAINT sched_PK PRIMARY KEY(sched_id),
+
+    CONSTRAINT valid_day CHECK (sched_day between 1 and 7)
 );

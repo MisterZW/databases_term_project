@@ -1,8 +1,8 @@
 DROP TABLE IF EXISTS RAIL_LINE CASCADE;
 
 CREATE TABLE RAIL_LINE (
-    rail_ID         INT,
     speed_limit     SMALLINT,
+    rail_id         SERIAL,
 
-    CONSTRAINT Rail_PK PRIMARY KEY(rail_ID)
+    CONSTRAINT Rail_PK PRIMARY KEY(rail_id)
 );
