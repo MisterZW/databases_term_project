@@ -172,6 +172,14 @@ with open('schedules.dat', 'w+') as sched_file:
 			sched_file.write( str(sched) + '\n' )
 			sched_id += 1
 
+	""" 
+	CAN BE TOGGLED BACK ON TO VERIFY FUNCTIONALITY OF stations_all_trains_visit()
+
+	for x in range(1, NUM_TRAINS+1):
+		sched2 = (1, str(time(hour = randint(10, 16))), 1, x, is_forward)
+		sched_file.write( str(sched2) + '\n' )
+	"""
+
 # build trips
 with open('trips.dat', 'w+') as trip_file:
 	trip_file.write('TRIP\n')

@@ -1,54 +1,3 @@
--- Find all trains that pass through a specific station at a specific
--- day/time combination: Find the trains that pass through a specific
--- station on a specific day and time.
-
-CREATE OR REPLACE FUNCTION trains_through_this_station()
-RETURNS TABLE (
-	train_id	INT
-)
-AS $$
-BEGIN
-
-END;
-$$
-LANGUAGE 'plpgsql';
-
--- Find the routes that travel more than one rail line: Find all
--- routes that travel more than one rail line.
-
-CREATE OR REPLACE FUNCTION more_than_one_rail()
-RETURNS TABLE (
-	route_id	INT
-)
-AS $$
-BEGIN
-
-END;
-$$
-LANGUAGE 'plpgsql';
-
--- Find routes that pass through the same stations but don’t have
--- the same stops: Find seemingly similar routes that differ by at least
--- 1 stop.
-
-CREATE OR REPLACE FUNCTION same_stations_diff_stops()
-RETURNS TABLE (
-	route1	INT
-	route2	INT
-)
-AS $$
-BEGIN
-
-
-
-END;
-$$
-LANGUAGE 'plpgsql';
-
--- Find any stations through which all trains pass through: Find
--- any stations that all the trains (that are in the system) pass at any
--- time during an entire week.
-
 -- Find all the trains that do not stop at a specific station: Find all
 -- trains that do not stop at a specified station at any time during an
 -- entire week.
@@ -65,6 +14,22 @@ BEGIN
 							WHERE s.train_id = t.train_id AND
 							s.t_route = rs.route_id AND 
 							rs.station_id = target_station);
+END;
+$$
+LANGUAGE 'plpgsql';
+
+-- Find any stations through which all trains pass through: Find
+-- any stations that all the trains (that are in the system) pass at any
+-- time during an entire week.
+
+CREATE OR REPLACE FUNCTION stations_all_trains_visit()
+RETURNS TABLE (
+	station_id	INT
+)
+AS $$
+BEGIN
+	RETURN QUERY SELECT s.station_id FROM STATION as s
+				 WHERE NOT EXISTS ( SELECT trains_which_dont_go_here(s.station_id) );
 END;
 $$
 LANGUAGE 'plpgsql';
@@ -91,14 +56,7 @@ $$
 LANGUAGE 'plpgsql';
 
 
--- Display the schedule of a route
-
--- Find the availability of a route at every stop on a specific day
--- and time:
-
-
 -- Make a reservation for a trip
--- Returns the new booking
 CREATE OR REPLACE FUNCTION make_reservation(agent_username VARCHAR, passenger_id INT, trip_id INT, num_tickets INT)
 RETURNS VOID
 AS $$
@@ -107,6 +65,7 @@ BEGIN
 END;
 $$
 LANGUAGE 'plpgsql';
+
 
 -- Insert a new customer in to the system
 CREATE OR REPLACE FUNCTION create_customer_account(fname VARCHAR, lname VARCHAR, email VARCHAR,
@@ -119,6 +78,7 @@ BEGIN
 END;
 $$
 LANGUAGE 'plpgsql';
+
 
 -- View client data by client id number
 CREATE OR REPLACE FUNCTION view_customer_account(id_no INT)
@@ -133,10 +93,13 @@ END;
 $$
 LANGUAGE 'plpgsql';
 
+
 -- Update client data
 --	UPDATE PASSENGER
 --	SET $$old_field = $$new_value
 --	WHERE customer_id = $$id;
+
+/*
 
 -- Find all routes that stop at a specified arrival station and then at the specified
 -- destination station on a specified day of the week
@@ -152,3 +115,68 @@ BEGIN
 END;
 $$
 LANGUAGE 'plpgsql';
+
+*/
+
+-- Find all trains that pass through a specific station at a specific
+-- day/time combination: Find the trains that pass through a specific
+-- station on a specific day and time.
+
+/*
+
+CREATE OR REPLACE FUNCTION trains_through_this_station()
+RETURNS TABLE (
+	train_id	INT
+)
+AS $$
+BEGIN
+
+END;
+$$
+LANGUAGE 'plpgsql';
+
+*/
+
+-- Find the routes that travel more than one rail line: Find all
+-- routes that travel more than one rail line.
+
+/*
+
+CREATE OR REPLACE FUNCTION more_than_one_rail()
+RETURNS TABLE (
+	route_id	INT
+)
+AS $$
+BEGIN
+
+END;
+$$
+LANGUAGE 'plpgsql';
+
+*/
+
+-- Find routes that pass through the same stations but don’t have
+-- the same stops: Find seemingly similar routes that differ by at least
+-- 1 stop.
+
+/*
+
+CREATE OR REPLACE FUNCTION same_stations_diff_stops()
+RETURNS TABLE (
+	route1	INT
+	route2	INT
+)
+AS $$
+BEGIN
+
+END;
+$$
+LANGUAGE 'plpgsql';
+
+*/
+
+-- Display the schedule of a route
+
+-- Find the availability of a route at every stop on a specific day
+-- and time:
+
