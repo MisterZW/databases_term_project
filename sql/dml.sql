@@ -153,8 +153,6 @@ LANGUAGE 'plpgsql';
 
 -- Find the routes that travel more than one rail line: Find all
 -- routes that travel more than one rail line.
-
-
 CREATE OR REPLACE FUNCTION more_than_one_rail()
 RETURNS TABLE (
 	route_id	INT
@@ -178,7 +176,6 @@ LANGUAGE 'plpgsql';
 -- 1 stop.
 
 -- This is a monstrosity, but it works!
-
 CREATE OR REPLACE FUNCTION same_stations_diff_stops()
 RETURNS TABLE (
 	route1	INT,

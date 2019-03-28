@@ -4,18 +4,21 @@ CREATE FUNCTION update_tickets_sold()
 RETURNS TRIGGER
 AS $$
 DECLARE
-	sched RECORD;
 	train RECORD;
+	trip_rec RECORD;
+	sched RECORD;
 BEGIN
-	SELECT * FROM SCHEDULE as s WHERE NEW.schedule = s.sched_ID INTO sched;
-	SELECT * FROM TRAIN as t WHERE sched.train = t.train_ID INTO train;
-	IF sched.tickets_sold + NEW.num_tickets > train.seats
+	SELECT * FROM TRIP WHERE TRIP.sched_id = NEW.trip INTO trip_rec;
+	SELECT * FROM SCHEDULE as s WHERE s.sched_id = trip_rec.sched_id INTO sched;
+	SELECT * FROM TRAIN as t WHERE sched.train_id = t.train_id INTO train;
+	
+	IF trip_rec.tickets_sold + NEW.num_tickets > train.seats
 	THEN
 		RETURN NULL;
 	ELSE
-		UPDATE SCHEDULE
+		UPDATE TRIP
 		SET tickets_sold = tickets_sold + NEW.num_tickets
-		WHERE NEW.schedule = sched_ID;
+		WHERE trip_rec.trip_id = TRIP.trip_id;
 	END IF;
 	RETURN NEW;
 END;
