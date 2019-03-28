@@ -11,6 +11,9 @@ NUM_ROUTES = 500
 NUM_TRACKS = 500
 NUM_AGENTS = 100
 
+#dict tracks which connection connects a 2-station tuple
+connection_map = {}
+
 # build trains
 with open('trains.dat', 'w+') as train_file:
 	train_file.write('TRAIN\n')
@@ -83,6 +86,7 @@ with open('routes.dat', 'w+') as route_file:
 # build connections
 # build as a simple grid layout
 with open('connections.dat', 'w+') as conn_file:
+	conn_id = 1
 	conn_file.write('CONNECTION\n')
 	grid_width = (int)(NUM_RAIL_LINES / 2)
 	fractions = [.1, .2, .3, .4, .5, .6, .7, .8, .9]
@@ -90,22 +94,28 @@ with open('connections.dat', 'w+') as conn_file:
 		#connect right
 		station1_id = i
 		
-		if (i+1) % grid_width == 0:
+		if (i) % grid_width == 0:
 			continue  # don't connect @ far right of grid
 		else:
 			station2_id = i+1
 
 		rail_id = (int)(i / grid_width) + 1
-		distance = randint(5, 1000)
+		distance = randint(5, 100)
 		distance += random.choice(fractions)
 		connection = (station1_id, station2_id, rail_id, distance)
+
+		# store directed for simplicity
+		connection_map[ (station1_id, station2_id) ] = conn_id 
+		connection_map[ (station2_id, station1_id) ] = conn_id
+
 		conn_file.write( str(connection) + '\n' )
+		conn_id += 1
 
 	for i in range(1, NUM_STATIONS):
 		#connect down
 		station1_id = i
 
-		if(i + grid_width >= NUM_STATIONS):
+		if(i + grid_width > NUM_STATIONS):
 			continue  # don't connect @ bottom of grid
 		else:
 			station2_id = (i + grid_width)
@@ -114,12 +124,21 @@ with open('connections.dat', 'w+') as conn_file:
 		distance = randint(5, 1000)
 		distance += random.choice(fractions)
 		connection = (station1_id, station2_id, rail_id, distance)
+
+		# store directed for simplicity
+		connection_map[ (station1_id, station2_id) ] = conn_id
+		connection_map[ (station2_id, station1_id) ] = conn_id
+
 		conn_file.write( str(connection) + '\n' )
+
+		conn_id += 1
 
 # build route_stations
 with open('route_stations.dat', 'w+') as rs_file:
 	rs_file.write('ROUTE_STATIONS\n')
 	grid_width = (int)(NUM_RAIL_LINES / 2)
+
+	prev_station = None
 
 	# build horizontal routes
 	for i in range(0, NUM_STATIONS):
@@ -133,13 +152,23 @@ with open('route_stations.dat', 'w+') as rs_file:
 			stops_here = False
 		else:
 			stops_here = True
+
+		if ordinal == 1:
+			conn_id = 'null'
+		else:
+			conn_id = connection_map[ (prev_station, station_id) ]
 		
-		entry = (ordinal, stops_here, station_id, route_id)
-		rs_file.write( str(entry) + '\n' )
+		# entry = (ordinal, stops_here, station_id, route_id, conn_id )
+
+		rs_file.write( '(' + str(ordinal) + ', ' + str(stops_here) + ', ' + str(station_id) + 
+			', ' + str(route_id) + ', ' +  str(conn_id) + ')\n' )
+
+		prev_station = station_id
 
 	# build vertical routes
 	for i in range(0, NUM_STATIONS):
 		station_id = i + 1
+		prev_station = station_id - grid_width
 		route_id = (int)(i % grid_width) + grid_width + 1
 		ordinal = (int)(i / grid_width) + 1
 
@@ -149,9 +178,18 @@ with open('route_stations.dat', 'w+') as rs_file:
 			stops_here = False
 		else:
 			stops_here = True
-		
-		entry = (ordinal, stops_here, station_id, route_id)
-		rs_file.write( str(entry) + '\n' )
+
+		if ordinal == 1:
+			conn_id = 'null'
+		else:
+			conn_id = connection_map[ (prev_station, station_id) ]
+
+		# entry = (ordinal, stops_here, station_id, route_id, conn_id)
+
+		rs_file.write( '(' + str(ordinal) + ', ' + str(stops_here) + ', ' + str(station_id) + 
+			', ' + str(route_id) + ', ' +  str(conn_id) + ')\n' )
+
+		# rs_file.write( str(entry) + '\n' )
 
 sched_id = 0
 
@@ -209,5 +247,3 @@ with open('bookings.dat', 'w+') as book_file:
 			booking = (agent_username, passenger_id, sched_id, num_tickets)
 			book_file.write( str(booking) + '\n' )
 		sched_id -= 1
-
-
