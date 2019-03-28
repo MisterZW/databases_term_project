@@ -154,7 +154,6 @@ LANGUAGE 'plpgsql';
 -- Find the routes that travel more than one rail line: Find all
 -- routes that travel more than one rail line.
 
-/*
 
 CREATE OR REPLACE FUNCTION more_than_one_rail()
 RETURNS TABLE (
@@ -162,32 +161,69 @@ RETURNS TABLE (
 )
 AS $$
 BEGIN
-
+	RETURN QUERY (SELECT DISTINCT rs1.route_id
+				 FROM ROUTE_STATIONS as rs1, ROUTE_STATIONS as rs2,
+				 	  CONNECTION as c1, CONNECTION as c2
+				 WHERE rs1.conn_id = c1.conn_id
+				 AND rs2.conn_id = c2.conn_id
+				 AND rs1.route_id = rs2.route_id
+				 AND c1.rail <> c2.rail);
 END;
 $$
 LANGUAGE 'plpgsql';
 
-*/
 
 -- Find routes that pass through the same stations but don’t have
 -- the same stops: Find seemingly similar routes that differ by at least
 -- 1 stop.
 
-/*
+-- This is a monstrosity, but it works!
 
 CREATE OR REPLACE FUNCTION same_stations_diff_stops()
 RETURNS TABLE (
-	route1	INT
+	route1	INT,
 	route2	INT
 )
 AS $$
 BEGIN
 
+RETURN QUERY (SELECT DISTINCT tr1.route_id, tr2.route_id
+				 FROM TRAIN_ROUTE as tr1, TRAIN_ROUTE as tr2
+		
+				 WHERE tr1.route_id < tr2.route_id
+
+				 AND tr1.route_id IN (SELECT DISTINCT rs.route_id FROM ROUTE_STATIONS as rs)
+				 AND tr2.route_id IN (SELECT DISTINCT rs.route_id FROM ROUTE_STATIONS as rs)
+
+				 AND NOT EXISTS (SELECT outside.station_id FROM ROUTE_STATIONS as outside
+				 	  			WHERE outside.route_id = tr1.route_id
+				 	  			AND outside.station_id NOT IN (
+				 	  				SELECT inside.station_id FROM ROUTE_STATIONS as inside
+				 	  				WHERE inside.route_id = tr2.route_id
+				 	  				AND inside.station_id = outside.station_id
+				 	  				)
+				 	  			)
+
+				 AND NOT EXISTS (SELECT outside2.station_id FROM ROUTE_STATIONS as outside2
+				 	  			WHERE outside2.route_id = tr2.route_id
+				 	  			AND outside2.station_id NOT IN (
+				 	  				SELECT inside2.station_id FROM ROUTE_STATIONS as inside2
+				 	  				WHERE inside2.route_id = tr1.route_id
+				 	  				AND inside2.station_id = outside2.station_id
+				 	  				)
+				 	  			)
+
+				 AND EXISTS( SELECT rsa.station_id FROM ROUTE_STATIONS as rsa, ROUTE_STATIONS as rsb
+				 			 WHERE rsa.route_id <> rsb.route_id
+				 			 AND rsa.station_id = rsb.station_id
+				 			 AND rsa.stops_here IS TRUE
+				 			 AND rsb.stops_here IS FALSE )
+				 );
+
 END;
 $$
 LANGUAGE 'plpgsql';
 
-*/
 
 -- Display the schedule of a route
 
