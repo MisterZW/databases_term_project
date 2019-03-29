@@ -221,8 +221,82 @@ END;
 $$
 LANGUAGE 'plpgsql';
 
+/*
+
+-- get the arrival/departure time of the train from an individual station
+CREATE OR REPLACE FUNCTION get_depart_time(target_route INT, target_station INT)
+RETURNS time
+AS $$
+
+
+
+END;
+$$
+LANGUAGE 'plpgsql';
+
+*/
+
+--get the station ordinal
+CREATE OR REPLACE FUNCTION get_station_ordinal(target_route INT, target_station INT)
+RETURNS INT
+AS $$
+BEGIN
+
+	RETURN rs.ordinal FROM ROUTE_STATIONS as rs 
+	WHERE rs.station_id = target_station
+	AND rs.route_id = target_route;
+
+END;
+$$
+LANGUAGE 'plpgsql';
+
+-- get the distance the train travels to an individual station
+-- returns 0 if arr_station and dest_station are the same
+-- returns nothing if stations/route combo is invalid
+-- returns the distance otherwise (regardless of which station is listed first) 
+CREATE OR REPLACE FUNCTION get_travel_distance(target_route INT, arr_station INT, dest_station INT)
+RETURNS DECIMAL(6,2)
+AS $$
+BEGIN
+	IF arr_station = dest_station
+		THEN RETURN 0;
+	END IF;
+
+	RETURN SUM(DISTINCT c.distance) FROM ROUTE_STATIONS AS rs, CONNECTION as c
+					    WHERE rs.route_id = target_route
+					    AND rs.conn_id IS NOT NULL
+					    AND rs.conn_id = c.conn_id
+					    AND CASE WHEN arr_station < dest_station
+					    	THEN	rs.ordinal BETWEEN get_station_ordinal(target_route, arr_station)
+					    		   AND get_station_ordinal(target_route, dest_station)
+					    	ELSE	rs.ordinal BETWEEN get_station_ordinal(target_route, dest_station)
+					    		   AND get_station_ordinal(target_route, arr_station)
+					    	END;
+
+END;
+$$
+LANGUAGE 'plpgsql';
+
 
 -- Display the schedule of a route
+CREATE OR REPLACE FUNCTION get_route_schedule(target_route INT)
+RETURNS TABLE (
+	departure_day		INT,
+	departure_time		time,
+	train_id 			INT
+)
+AS $$
+BEGIN
+	RETURN QUERY SELECT s.sched_day AS departure_day, s.sched_time AS departure_time,
+						s.train_id AS train_id
+			  	FROM SCHEDULE AS s
+				WHERE s.t_route = target_route
+				ORDER BY departure_day DESC, departure_time DESC;
+
+END;
+$$
+LANGUAGE 'plpgsql';
+
 
 -- Find the availability of a route at every stop on a specific day
 -- and time:
