@@ -259,19 +259,46 @@ RETURNS DECIMAL(6,2)
 AS $$
 BEGIN
 	IF arr_station = dest_station
-		THEN RETURN 0;
+	THEN 
+		RETURN 0;
+	ELSE
+		RETURN SUM(DISTINCT c.distance) 
+			FROM ROUTE_STATIONS AS rs, CONNECTION as c
+		    WHERE rs.route_id = target_route
+		    AND rs.conn_id IS NOT NULL
+		    AND rs.conn_id = c.conn_id
+		    AND CASE WHEN arr_station < dest_station
+		    	THEN	rs.ordinal BETWEEN get_station_ordinal(target_route, arr_station)
+		    		   AND get_station_ordinal(target_route, dest_station)
+		    	ELSE	rs.ordinal BETWEEN get_station_ordinal(target_route, dest_station)
+		    		   AND get_station_ordinal(target_route, arr_station)
+		    	END;
 	END IF;
+END;
+$$
+LANGUAGE 'plpgsql';
 
-	RETURN SUM(DISTINCT c.distance) FROM ROUTE_STATIONS AS rs, CONNECTION as c
-					    WHERE rs.route_id = target_route
-					    AND rs.conn_id IS NOT NULL
-					    AND rs.conn_id = c.conn_id
-					    AND CASE WHEN arr_station < dest_station
-					    	THEN	rs.ordinal BETWEEN get_station_ordinal(target_route, arr_station)
-					    		   AND get_station_ordinal(target_route, dest_station)
-					    	ELSE	rs.ordinal BETWEEN get_station_ordinal(target_route, dest_station)
-					    		   AND get_station_ordinal(target_route, arr_station)
-					    	END;
+-- get the number of stops on a given route between arr_station and dest_station, inclusive
+-- returns 0 if arr_station and dest_station are the same
+CREATE OR REPLACE FUNCTION get_num_stops(target_route INT, arr_station INT, dest_station INT)
+RETURNS INT
+AS $$
+BEGIN
+	IF arr_station = dest_station
+	THEN 
+		RETURN 0;
+	ELSE
+		RETURN COUNT(DISTINCT rs.station_id) 
+			FROM ROUTE_STATIONS as rs
+			WHERE rs.route_id = target_route
+			AND rs.stops_here IS TRUE
+			AND CASE WHEN arr_station < dest_station
+		    	THEN	rs.ordinal BETWEEN get_station_ordinal(target_route, arr_station)
+		    		   AND get_station_ordinal(target_route, dest_station)
+		    	ELSE	rs.ordinal BETWEEN get_station_ordinal(target_route, dest_station)
+		    		   AND get_station_ordinal(target_route, arr_station)
+		    	END;
+	END IF;
 
 END;
 $$
