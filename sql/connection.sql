@@ -5,7 +5,7 @@ CREATE TABLE CONNECTION (
     station_1       INT,
     station_2       INT,
     rail            INT,
-    distance        DECIMAL(6, 2),
+    distance        NUMERIC(6, 2),
     conn_ID         SERIAL,
 
     CONSTRAINT S1_FK

@@ -9,12 +9,21 @@ DECLARE
 		FROM ROUTE_STATIONS AS rs 
 		WHERE rs.route_id = NEW.t_route;
 	next_rs RECORD;
+	conn_rec RECORD;
+	rail_rec RECORD;
+	t_cost NUMERIC(6, 2);
+	temp_time NUMERIC(6,2);
+	hours INT;
+	minutes INT;
+	t_time INTERVAL;
+	arr_time TIME;
 BEGIN
 	SELECT * 
 		FROM TRAIN as t 
 		WHERE t.train_id = NEW.train_id 
 		into train_rec;
 
+	arr_time = NEW.sched_time;
 	open rs_cursor;
 
 	LOOP
@@ -25,7 +34,23 @@ BEGIN
 		END IF;
 
 		IF next_rs.conn_id IS NOT NULL
-			THEN INSERT INTO TRIP VALUES(NEW.sched_id, train_rec.seats, next_rs.rs_id);
+		THEN
+			SELECT * FROM CONNECTION AS c WHERE next_rs.conn_id = c.conn_id INTO conn_rec;
+			SELECT * FROM RAIL_LINE AS rl WHERE rl.rail_id = conn_rec.rail INTO rail_rec;
+			t_cost = (train_rec.ppm * conn_rec.distance);
+
+			temp_time = conn_rec.distance / LEAST(train_rec.top_speed, rail_rec.speed_limit);
+			hours = floor(temp_time);
+			temp_time = temp_time - floor(temp_time);
+			minutes = floor(temp_time * 60);
+
+			t_time = make_interval(hours := hours, mins := minutes);
+			arr_time = arr_time + t_time;
+
+			INSERT INTO TRIP (sched_id, seats_left, rs_id, trip_distance,
+				trip_cost, trip_time, arrival_time)
+			VALUES(NEW.sched_id, train_rec.seats, next_rs.rs_id,
+				conn_rec.distance, t_cost, t_time, arr_time);
 		END IF;
 	END LOOP;
 
@@ -36,7 +61,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER sched_needs_trips
-AFTER INSERT ON SCHEDULE
+BEFORE INSERT ON SCHEDULE
 FOR EACH ROW
 EXECUTE PROCEDURE create_trips();
 

@@ -135,24 +135,27 @@ LANGUAGE 'plpgsql';
 -- Find all trains that pass through a specific station at a specific
 -- day/time combination: Find the trains that pass through a specific
 -- station on a specific day and time.
-
-/*
-
-CREATE OR REPLACE FUNCTION trains_through_this_station()
+CREATE OR REPLACE FUNCTION trains_through_this_station(target_time TIME, target_day INT, target_station INT)
 RETURNS TABLE (
 	train_id	INT
 )
 AS $$
 BEGIN
 
+RETURN QUERY SELECT s.train_id
+			 FROM SCHEDULE as s, TRIP as t, ROUTE_STATIONS as rs
+			 WHERE rs.station_id = target_station
+			 AND rs.route_id = s.t_route
+			 AND t.sched_id = s.sched_id
+			 AND s.sched_day = target_day
+			 AND t.arrival_time = target_time;
+
 END;
 $$
 LANGUAGE 'plpgsql';
 
-*/
 
--- Find the routes that travel more than one rail line: Find all
--- routes that travel more than one rail line.
+-- Find the routes that travel more than one rail line
 CREATE OR REPLACE FUNCTION more_than_one_rail()
 RETURNS TABLE (
 	route_id	INT
@@ -255,7 +258,7 @@ LANGUAGE 'plpgsql';
 -- returns nothing if stations/route combo is invalid
 -- returns the distance otherwise (regardless of which station is listed first) 
 CREATE OR REPLACE FUNCTION get_travel_distance(target_route INT, arr_station INT, dest_station INT)
-RETURNS DECIMAL(6,2)
+RETURNS NUMERIC(6,2)
 AS $$
 BEGIN
 	IF arr_station = dest_station

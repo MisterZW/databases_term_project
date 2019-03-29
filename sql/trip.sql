@@ -5,7 +5,11 @@ CREATE TABLE TRIP (
 	sched_id		INT,
 	seats_left		INT,
 	rs_id			INT,
-	trip_id			SERIAL,
+	trip_distance 	NUMERIC(6, 2),
+	trip_cost		NUMERIC(6, 2),
+	trip_time		INTERVAL,
+	arrival_time	TIME,
+	trip_id			SERIAL,	
 
 	CONSTRAINT trip_pk PRIMARY KEY (trip_id),
 
