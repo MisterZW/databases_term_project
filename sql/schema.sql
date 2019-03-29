@@ -48,9 +48,9 @@ DROP TABLE IF EXISTS CONNECTION CASCADE;
 
 CREATE TABLE CONNECTION (
     
-    station_1       SERIAL,
-    station_2       SERIAL,
-    rail            SERIAL,
+    station_1       INT,
+    station_2       INT,
+    rail            INT,
     distance        DECIMAL(6, 2),
     conn_ID         SERIAL,
 
@@ -84,9 +84,12 @@ DROP TABLE IF EXISTS ROUTE_STATIONS CASCADE;
 CREATE TABLE ROUTE_STATIONS (
     ordinal         	SMALLINT,
     stops_here      	BOOLEAN NOT NULL,
-    station_id			SERIAL,
-    route_id			SERIAL,
+    station_id			INT,
+    route_id			INT,
     conn_id				INT REFERENCES CONNECTION(conn_id),
+    rs_id				SERIAL,
+
+    CONSTRAINT rs_PK PRIMARY KEY(rs_id),
 
     CONSTRAINT sid_FK
         FOREIGN KEY(station_id) REFERENCES STATION(station_id),
@@ -99,8 +102,8 @@ DROP TABLE IF EXISTS SCHEDULE CASCADE;
 CREATE TABLE SCHEDULE (
     sched_day       INT, -- enum value 1 - 7
     sched_time      TIME,
-    t_route         SERIAL,
-    train_id		SERIAL,
+    t_route         INT,
+    train_id		INT,
     is_forward      BOOLEAN,
     sched_id        SERIAL,
 
@@ -118,15 +121,19 @@ DROP TABLE IF EXISTS TRIP CASCADE;
 
 CREATE TABLE TRIP (
 	
-	sched_id		SERIAL,
-	trip_date		date,
+	sched_id		INT,
+	seats_left		INT,
+	rs_id			INT,
 	trip_id			SERIAL,
-	tickets_sold	INT DEFAULT 0,
 
 	CONSTRAINT trip_pk PRIMARY KEY (trip_id),
 
+	CONSTRAINT rs_id_fk 
+		FOREIGN KEY(rs_id) REFERENCES ROUTE_STATIONS(rs_id),
+
 	CONSTRAINT trip_sched_fk 
 		FOREIGN KEY(sched_id) REFERENCES SCHEDULE(sched_id)
+		DEFERRABLE INITIALLY DEFERRED
 
 );
 DROP TABLE IF EXISTS BOOKING CASCADE;
@@ -146,26 +153,66 @@ CREATE TABLE BOOKING (
     CONSTRAINT sched_book_FK
         FOREIGN KEY(trip) REFERENCES TRIP(trip_id)
 );
-DROP FUNCTION IF EXISTS update_tickets_sold() CASCADE;
+DROP FUNCTION IF EXISTS create_trips() CASCADE;
 
-CREATE FUNCTION update_tickets_sold() 
+CREATE FUNCTION create_trips()
 RETURNS TRIGGER
 AS $$
 DECLARE
-	train RECORD;
-	trip_rec RECORD;
-	sched RECORD;
+	train_rec RECORD;
+	rs_cursor CURSOR FOR SELECT rs_id, conn_id
+		FROM ROUTE_STATIONS AS rs 
+		WHERE rs.route_id = NEW.t_route;
+	next_rs RECORD;
 BEGIN
-	SELECT * FROM TRIP WHERE TRIP.sched_id = NEW.trip INTO trip_rec;
-	SELECT * FROM SCHEDULE as s WHERE s.sched_id = trip_rec.sched_id INTO sched;
-	SELECT * FROM TRAIN as t WHERE sched.train_id = t.train_id INTO train;
-	
-	IF trip_rec.tickets_sold + NEW.num_tickets > train.seats
+	SELECT * 
+		FROM TRAIN as t 
+		WHERE t.train_id = NEW.train_id 
+		into train_rec;
+
+	open rs_cursor;
+
+	LOOP
+		FETCH rs_cursor INTO next_rs;
+
+		IF NOT FOUND THEN
+			EXIT;
+		END IF;
+
+		IF next_rs.conn_id IS NOT NULL
+			THEN INSERT INTO TRIP VALUES(NEW.sched_id, train_rec.seats, next_rs.rs_id);
+		END IF;
+	END LOOP;
+
+	close rs_cursor;
+
+	RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER sched_needs_trips
+AFTER INSERT ON SCHEDULE
+FOR EACH ROW
+EXECUTE PROCEDURE create_trips();
+
+
+DROP FUNCTION IF EXISTS update_seats_left() CASCADE;
+
+-- updates TRIP seating totals when bookings are made
+CREATE FUNCTION update_seats_left() 
+RETURNS TRIGGER
+AS $$
+DECLARE
+	trip_rec RECORD;
+BEGIN
+	SELECT * FROM TRIP as t WHERE t.trip_id = NEW.trip INTO trip_rec;
+
+	IF NEW.num_tickets > trip_rec.seats_left
 	THEN
 		RETURN NULL;
 	ELSE
 		UPDATE TRIP
-		SET tickets_sold = tickets_sold + NEW.num_tickets
+		SET seats_left = seats_left - NEW.num_tickets
 		WHERE trip_rec.trip_id = TRIP.trip_id;
 	END IF;
 	RETURN NEW;
@@ -175,4 +222,4 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trig_sell_tickets
 BEFORE INSERT ON BOOKING
 FOR EACH ROW
-EXECUTE PROCEDURE update_tickets_sold();
+EXECUTE PROCEDURE update_seats_left();

@@ -305,6 +305,32 @@ $$
 LANGUAGE 'plpgsql';
 
 
+-- get the number of stops on a given route between arr_station and dest_station, inclusive
+-- returns 0 if arr_station and dest_station are the same
+CREATE OR REPLACE FUNCTION get_num_stations_passed(target_route INT, arr_station INT, dest_station INT)
+RETURNS INT
+AS $$
+BEGIN
+	IF arr_station = dest_station
+	THEN 
+		RETURN 0;
+	ELSE
+		RETURN COUNT(DISTINCT rs.station_id) 
+			FROM ROUTE_STATIONS as rs
+			WHERE rs.route_id = target_route
+			AND CASE WHEN arr_station < dest_station
+		    	THEN	rs.ordinal BETWEEN get_station_ordinal(target_route, arr_station)
+		    		   AND get_station_ordinal(target_route, dest_station)
+		    	ELSE	rs.ordinal BETWEEN get_station_ordinal(target_route, dest_station)
+		    		   AND get_station_ordinal(target_route, arr_station)
+		    	END;
+	END IF;
+
+END;
+$$
+LANGUAGE 'plpgsql';
+
+
 -- Display the schedule of a route
 CREATE OR REPLACE FUNCTION get_route_schedule(target_route INT)
 RETURNS TABLE (

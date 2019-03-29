@@ -220,6 +220,8 @@ with open('schedules.dat', 'w+') as sched_file:
 		sched_file.write( str(sched2) + '\n' )
 	"""
 
+"""
+
 # build trips
 with open('trips.dat', 'w+') as trip_file:
 	trip_file.write('TRIP\n')
@@ -233,7 +235,9 @@ with open('trips.dat', 'w+') as trip_file:
 			train_id = rail
 			trip = (i, str(trip_date))
 			trip_file.write(str(trip) +'\n')
-			
+
+"""
+
 
 # build bookings
 with open('bookings.dat', 'w+') as book_file:

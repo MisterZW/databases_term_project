@@ -1,23 +1,63 @@
-DROP FUNCTION IF EXISTS update_tickets_sold() CASCADE;
+DROP FUNCTION IF EXISTS create_trips() CASCADE;
 
-CREATE FUNCTION update_tickets_sold() 
+CREATE FUNCTION create_trips()
 RETURNS TRIGGER
 AS $$
 DECLARE
-	train RECORD;
-	trip_rec RECORD;
-	sched RECORD;
+	train_rec RECORD;
+	rs_cursor CURSOR FOR SELECT rs_id, conn_id
+		FROM ROUTE_STATIONS AS rs 
+		WHERE rs.route_id = NEW.t_route;
+	next_rs RECORD;
 BEGIN
-	SELECT * FROM TRIP WHERE TRIP.sched_id = NEW.trip INTO trip_rec;
-	SELECT * FROM SCHEDULE as s WHERE s.sched_id = trip_rec.sched_id INTO sched;
-	SELECT * FROM TRAIN as t WHERE sched.train_id = t.train_id INTO train;
-	
-	IF trip_rec.tickets_sold + NEW.num_tickets > train.seats
+	SELECT * 
+		FROM TRAIN as t 
+		WHERE t.train_id = NEW.train_id 
+		into train_rec;
+
+	open rs_cursor;
+
+	LOOP
+		FETCH rs_cursor INTO next_rs;
+
+		IF NOT FOUND THEN
+			EXIT;
+		END IF;
+
+		IF next_rs.conn_id IS NOT NULL
+			THEN INSERT INTO TRIP VALUES(NEW.sched_id, train_rec.seats, next_rs.rs_id);
+		END IF;
+	END LOOP;
+
+	close rs_cursor;
+
+	RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER sched_needs_trips
+AFTER INSERT ON SCHEDULE
+FOR EACH ROW
+EXECUTE PROCEDURE create_trips();
+
+
+DROP FUNCTION IF EXISTS update_seats_left() CASCADE;
+
+-- updates TRIP seating totals when bookings are made
+CREATE FUNCTION update_seats_left() 
+RETURNS TRIGGER
+AS $$
+DECLARE
+	trip_rec RECORD;
+BEGIN
+	SELECT * FROM TRIP as t WHERE t.trip_id = NEW.trip INTO trip_rec;
+
+	IF NEW.num_tickets > trip_rec.seats_left
 	THEN
 		RETURN NULL;
 	ELSE
 		UPDATE TRIP
-		SET tickets_sold = tickets_sold + NEW.num_tickets
+		SET seats_left = seats_left - NEW.num_tickets
 		WHERE trip_rec.trip_id = TRIP.trip_id;
 	END IF;
 	RETURN NEW;
@@ -27,4 +67,4 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trig_sell_tickets
 BEFORE INSERT ON BOOKING
 FOR EACH ROW
-EXECUTE PROCEDURE update_tickets_sold();
+EXECUTE PROCEDURE update_seats_left();

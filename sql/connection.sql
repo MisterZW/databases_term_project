@@ -2,9 +2,9 @@ DROP TABLE IF EXISTS CONNECTION CASCADE;
 
 CREATE TABLE CONNECTION (
     
-    station_1       SERIAL,
-    station_2       SERIAL,
-    rail            SERIAL,
+    station_1       INT,
+    station_2       INT,
+    rail            INT,
     distance        DECIMAL(6, 2),
     conn_ID         SERIAL,
 

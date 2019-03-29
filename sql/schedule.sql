@@ -3,8 +3,8 @@ DROP TABLE IF EXISTS SCHEDULE CASCADE;
 CREATE TABLE SCHEDULE (
     sched_day       INT, -- enum value 1 - 7
     sched_time      TIME,
-    t_route         SERIAL,
-    train_id		SERIAL,
+    t_route         INT,
+    train_id		INT,
     is_forward      BOOLEAN,
     sched_id        SERIAL,
 
