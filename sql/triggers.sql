@@ -140,8 +140,9 @@ BEGIN
 	IF NEW.num_tickets > trip_rec.seats_left
 	THEN
 		RAISE integrity_constraint_violation 
-			USING MESSAGE = 'CONSTRAINT VIOLATION: Cannot overbook -- tripID ' || trip_rec.trip_id  ||
-				' only has ' || trip_rec.seats_left || ' seats left.';
+			USING MESSAGE = 'CONSTRAINT VIOLATION: Cannot overbook tripID ' || trip_rec.trip_id  ||
+				' -- Tried to book ' || NEW.num_tickets || ' seats but train only has ' || 
+				trip_rec.seats_left || ' seats left.';
 	ELSE
 		UPDATE TRIP
 		SET seats_left = seats_left - NEW.num_tickets
