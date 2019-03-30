@@ -253,11 +253,21 @@ BEGIN
 				RETURN NULL;
 			END IF;
 
-			IF next_rs.station_id = conn_rec.station_1
+			IF NEW.is_forward IS TRUE
 			THEN
-				depart_station = conn_rec.station_2;
+				IF next_rs.station_id = conn_rec.station_1
+				THEN
+					depart_station = conn_rec.station_2;
+				ELSE
+					depart_station = conn_rec.station_1;
+				END IF;
 			ELSE
-				depart_station = conn_rec.station_1;
+				IF next_rs.station_id = conn_rec.station_1
+				THEN
+					depart_station = conn_rec.station_1;
+				ELSE
+					depart_station = conn_rec.station_2;
+				END IF;
 			END IF;
 
 			INSERT INTO TRIP (sched_id, seats_left, rs_id, trip_distance,

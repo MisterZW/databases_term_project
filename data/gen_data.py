@@ -20,7 +20,7 @@ with open('trains.dat', 'w+') as train_file:
 	for i in range(NUM_TRAINS):
 		top_speed = 60 + randint(0, 15) * 5
 		seats = randint(150, 301)
-		ppm = (randint(1, 10) / 50.0)
+		ppm = (randint(1, 10) / 40.0)
 		train = (top_speed, seats, ppm)
 		train_file.write( str(train) + '\n' )
 
@@ -100,7 +100,7 @@ with open('connections.dat', 'w+') as conn_file:
 			station2_id = i+1
 
 		rail_id = (int)(i / grid_width) + 1
-		distance = randint(2, 50)
+		distance = randint(2, 75)
 		distance += random.choice(fractions)
 		connection = (station1_id, station2_id, rail_id, distance)
 
@@ -121,7 +121,7 @@ with open('connections.dat', 'w+') as conn_file:
 			station2_id = (i + grid_width)
 
 		rail_id = (int)(i % grid_width) + grid_width + 1
-		distance = randint(2, 50)
+		distance = randint(2, 75)
 		distance += random.choice(fractions)
 		connection = (station1_id, station2_id, rail_id, distance)
 

@@ -106,27 +106,84 @@ LANGUAGE 'plpgsql';
 --	WHERE customer_id = $$id;
 
 
+--get the station ordinal
+CREATE OR REPLACE FUNCTION get_station_ordinal(target_route INT, target_station INT)
+RETURNS INT
+AS $$
+BEGIN
+
+	RETURN rs.ordinal FROM ROUTE_STATIONS as rs 
+	WHERE rs.station_id = target_station
+	AND rs.route_id = target_route;
+
+END;
+$$
+LANGUAGE 'plpgsql';
+
+-- Returns true if all required trips on the schedule have at least 1 seat on target day  
+-- Otherwise returns false
+CREATE OR REPLACE FUNCTION is_available(target_schedule INT, ord_1 INT, ord_2 INT)
+RETURNS BOOLEAN
+AS $$
+BEGIN
+	IF EXISTS(SELECT trip_id 
+		 	FROM schedule as s, TRIP as t
+			WHERE s.sched_id = t.sched_id
+			AND CASE WHEN ord_1 < ord_2
+				THEN get_station_ordinal(s.t_route, t.depart_station) BETWEEN ord_1 AND ord_2
+				ELSE get_station_ordinal(s.t_route, t.depart_station) BETWEEN ord_2 AND ord_1
+				END
+			AND t.seats_left <= 0)
+	THEN
+		RETURN FALSE;
+	ELSE
+		RETURN TRUE;
+	END IF; 
+END
+$$
+LANGUAGE 'plpgsql';
+
+
 -- Find all routes that stop at a specified arrival station and then at the specified
 -- destination station on a specified day of the week
+-- excludes trip results 
 CREATE OR REPLACE FUNCTION single_trip_route_search(arr_st INT, dest_st INT, target_day INT) 
 RETURNS TABLE (
-	route_id 	INT
+	route_id 				INT,
+	sched_id				INT,
+	num_stations_passed 	BIGINT,
+	num_stops   			INT,
+	total_price				NUMERIC(6,2),
+	total_distance			NUMERIC(6,2),
+	total_time				INTERVAL
 )
 AS $$
 BEGIN
-	RETURN QUERY SELECT DISTINCT s.t_route FROM SCHEDULE AS s
-				 WHERE s.sched_day = target_day AND
-				 s.t_route IN 	(SELECT r1.route_id
-				 				FROM ROUTE_STATIONS AS r1, ROUTE_STATIONS AS r2
-				 				WHERE r1.route_id = r2.route_id
-				 				AND r1.station_id = arr_st
-				 				AND r2.station_id = dest_st
-				 				AND r1.stops_here IS TRUE
-				 				AND r2.stops_here IS TRUE
-				 				AND CASE WHEN s.is_forward IS TRUE
-				 					THEN r1.ordinal < r2.ordinal
-				 					ELSE r1.ordinal > r2.ordinal
-				 					END);
+	RETURN QUERY SELECT DISTINCT 
+					s.t_route AS route_id,
+					s.sched_id AS sched_id,
+					COUNT(DISTINCT t.trip_id) + 1 AS num_stations_passed,
+					get_num_stops(s.t_route, arr_st, dest_st) AS num_stops,
+					SUM(t.trip_cost) AS total_price,
+					SUM(t.trip_distance) AS total_distance,
+					SUM(t.trip_time) AS total_time
+
+				 FROM SCHEDULE AS s, TRIP as t
+				 WHERE s.sched_day = target_day 
+				 AND t.sched_id = s.sched_id
+				 AND s.t_route IN (SELECT r1.route_id
+			 				FROM ROUTE_STATIONS AS r1, ROUTE_STATIONS AS r2
+			 				WHERE r1.route_id = r2.route_id
+			 				AND r1.station_id = arr_st
+			 				AND r2.station_id = dest_st
+			 				AND r1.stops_here IS TRUE
+			 				AND r2.stops_here IS TRUE
+			 				AND is_available(s.sched_id, r1.ordinal, r2.ordinal) IS TRUE
+			 				AND CASE WHEN s.is_forward IS TRUE
+			 					THEN r1.ordinal < r2.ordinal
+			 					ELSE r1.ordinal > r2.ordinal
+			 					END)
+				 GROUP BY s.t_route, s.sched_id;
 END;
 $$
 LANGUAGE 'plpgsql';
@@ -224,20 +281,6 @@ END;
 $$
 LANGUAGE 'plpgsql';
 
-
---get the station ordinal
-CREATE OR REPLACE FUNCTION get_station_ordinal(target_route INT, target_station INT)
-RETURNS INT
-AS $$
-BEGIN
-
-	RETURN rs.ordinal FROM ROUTE_STATIONS as rs 
-	WHERE rs.station_id = target_station
-	AND rs.route_id = target_route;
-
-END;
-$$
-LANGUAGE 'plpgsql';
 
 -- get the distance the train travels to an individual station
 -- returns 0 if arr_station and dest_station are the same
