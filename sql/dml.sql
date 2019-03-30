@@ -13,13 +13,19 @@ LANGUAGE 'plpgsql';
 
 -- View client data by client id number
 CREATE OR REPLACE FUNCTION view_customer_account(id_no INT)
-RETURNS RECORD
+RETURNS TABLE (
+	first_name      VARCHAR(20),
+    last_name       VARCHAR(20),
+    email           VARCHAR(35),
+    phone           CHAR(10),
+    street_address  VARCHAR(50),
+    city            VARCHAR(25),
+    zip             CHAR(5),
+    customer_ID     INT
+)
 AS $$
-DECLARE
-	return_value RECORD;
 BEGIN
-	SELECT * FROM PASSENGER WHERE customer_id = id_no LIMIT 1 INTO return_value;
-	RETURN return_value;
+	RETURN QUERY SELECT * FROM PASSENGER as p WHERE p.customer_ID = id_no LIMIT 1;
 END;
 $$
 LANGUAGE 'plpgsql';
@@ -288,13 +294,19 @@ RETURNS TABLE (
 AS $$
 BEGIN
 
-RETURN QUERY SELECT s.train_id
+RETURN QUERY (SELECT s.train_id
 			 FROM SCHEDULE as s, TRIP as t, ROUTE_STATIONS as rs
 			 WHERE rs.station_id = target_station
 			 AND rs.route_id = s.t_route
 			 AND t.sched_id = s.sched_id
 			 AND s.sched_day = target_day
-			 AND t.arrival_time = target_time;
+			 AND t.arrival_time = target_time)
+			UNION 
+			(SELECT s.train_id FROM SCHEDULE as s, TRIP as t
+			WHERE s.sched_day = target_day
+			AND s.sched_time = target_time
+			AND t.sched_id = s.sched_id
+			AND t.depart_station = target_station);
 
 END;
 $$
