@@ -1,7 +1,7 @@
 DROP TABLE IF EXISTS SCHEDULE CASCADE;
 
 CREATE TABLE SCHEDULE (
-    sched_day       INT, -- enum value 1 - 7
+    sched_day       INT, -- enum value 1 (MONDAY) through 7 (SUNDAY)
     sched_time      TIME,
     t_route         INT,
     train_id		INT,

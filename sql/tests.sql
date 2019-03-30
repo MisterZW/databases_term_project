@@ -100,3 +100,38 @@ INSERT INTO SCHEDULE VALUES(1, '22:00:00', 15, 200, true);
 \echo 'TEST CASE: attempt INSERTing a booking for a trip which will overbook the train'
 \echo 'EXPECTED BEHAVIOR: raises exception stating there are not enough seats to accomodate the reservation'
 INSERT INTO BOOKING VALUES('agent1', 1, 1, 1000);
+\echo '\n'
+
+\echo 'TEST CASE: attempt INSERTing two schedules for invalid days (0 and 8)'
+\echo 'EXPECTED BEHAVIOR: triggers a check constraint which prevents both inserts'
+INSERT INTO SCHEDULE VALUES(0, '08:00:00', 12, 150, true);
+INSERT INTO SCHEDULE VALUES(8, '08:00:00', 13, 151, true);
+\echo '\n'
+
+\echo 'TEST CASE: attempt INSERTing two bookings for zero and for a negative number of tickets'
+\echo 'EXPECTED BEHAVIOR: triggers a check constraint which prevents both inserts'
+INSERT INTO BOOKING VALUES('agent1', 1, 1, 0);
+INSERT INTO BOOKING VALUES('agent1', 1, 1, -2);
+\echo '\n'
+
+\echo 'TEST CASE: attempt INSERTing two connections with zero and negative distances'
+\echo 'EXPECTED BEHAVIOR: triggers a check constraint which prevents both inserts'
+INSERT INTO CONNECTION VALUES(1, 2, 31, 0);
+INSERT INTO CONNECTION VALUES(1, 2, 31, -2.5);
+\echo '\n'
+
+\echo 'TEST CASE: attempt INSERTing two rail lines with zero and negative speed limits'
+\echo 'EXPECTED BEHAVIOR: triggers a check constraint which prevents both inserts'
+INSERT INTO RAIL_LINE VALUES(0);
+INSERT INTO RAIL_LINE VALUES(-2);
+\echo '\n'
+
+\echo 'TEST CASE: attempt INSERTing two trains with zero and negative parameters'
+\echo 'EXPECTED BEHAVIOR: triggers 3 different check constraint (twice each) which prevents all inserts'
+INSERT INTO TRAIN (top_speed, seats, ppm) VALUES(50, 100, 0);
+INSERT INTO TRAIN (top_speed, seats, ppm) VALUES(50, 100, -2.5);
+INSERT INTO TRAIN (top_speed, seats, ppm) VALUES(0, 100, 1.5);
+INSERT INTO TRAIN (top_speed, seats, ppm) VALUES(-2, 100, 1.5);
+INSERT INTO TRAIN (top_speed, seats, ppm) VALUES(50, 0, 1.5);
+INSERT INTO TRAIN (top_speed, seats, ppm) VALUES(50, -1, 1.5);
+\echo '\n'

@@ -9,20 +9,28 @@ CREATE TABLE AGENT (
 DROP TABLE IF EXISTS RAIL_LINE CASCADE;
 
 CREATE TABLE RAIL_LINE (
-    speed_limit     INT,
+    speed_limit     INT NOT NULL,
     rail_id         SERIAL,
 
-    CONSTRAINT Rail_PK PRIMARY KEY(rail_id)
+    CONSTRAINT Rail_PK PRIMARY KEY(rail_id),
+
+    CONSTRAINT valid_speed_limit CHECK (speed_limit > 0)
 );
 DROP TABLE IF EXISTS TRAIN CASCADE;
 
 CREATE TABLE TRAIN (
-    top_speed       INT,
-    seats           INT,
-    ppm             NUMERIC(6, 2),
+    top_speed       INT NOT NULL,
+    seats           INT NOT NULL,
+    ppm             NUMERIC(6, 2) NOT NULL,
     train_id        SERIAL,
 
-    CONSTRAINT Train_PK PRIMARY KEY(train_id)
+    CONSTRAINT Train_PK PRIMARY KEY(train_id),
+
+    CONSTRAINT valid_top_speed CHECK (top_speed > 0),
+
+    CONSTRAINT valid_ppm CHECK (ppm > 0),
+
+    CONSTRAINT valid_seats CHECK (seats > 0)
 );
 DROP TABLE IF EXISTS STATION CASCADE;
 
@@ -30,8 +38,8 @@ CREATE TABLE STATION (
     street_address  VARCHAR(50),
     city            VARCHAR(25),
     zip             CHAR(5),
-    open_time       TIME,
-    close_time      TIME,
+    open_time       TIME NOT NULL,
+    close_time      TIME NOT NULL,
     station_id      SERIAL,
 
     CONSTRAINT Station_PK PRIMARY KEY(station_id)
@@ -51,7 +59,7 @@ CREATE TABLE CONNECTION (
     station_1       INT,
     station_2       INT,
     rail            INT,
-    distance        NUMERIC(6, 2),
+    distance        NUMERIC(6, 2) NOT NULL,
     conn_ID         SERIAL,
 
     CONSTRAINT S1_FK
@@ -63,7 +71,9 @@ CREATE TABLE CONNECTION (
     CONSTRAINT rail_FK
         FOREIGN KEY(rail) REFERENCES RAIL_LINE(rail_id),
 
-    CONSTRAINT connection_PK PRIMARY KEY(conn_id)
+    CONSTRAINT connection_PK PRIMARY KEY(conn_id),
+
+    CONSTRAINT valid_distance CHECK (distance > 0)
 );
 DROP TABLE IF EXISTS PASSENGER CASCADE;
 
@@ -100,7 +110,7 @@ CREATE TABLE ROUTE_STATIONS (
 DROP TABLE IF EXISTS SCHEDULE CASCADE;
 
 CREATE TABLE SCHEDULE (
-    sched_day       INT, -- enum value 1 - 7
+    sched_day       INT, -- enum value 1 (MONDAY) through 7 (SUNDAY)
     sched_time      TIME,
     t_route         INT,
     train_id		INT,
@@ -163,7 +173,9 @@ CREATE TABLE BOOKING (
         FOREIGN KEY(passenger) REFERENCES PASSENGER(customer_id),
     
     CONSTRAINT sched_book_FK
-        FOREIGN KEY(trip) REFERENCES TRIP(trip_id)
+        FOREIGN KEY(trip) REFERENCES TRIP(trip_id),
+
+    CONSTRAINT valid_num_tickets CHECK (num_tickets > 0)
 );
 DROP FUNCTION IF EXISTS create_trips() CASCADE;
 

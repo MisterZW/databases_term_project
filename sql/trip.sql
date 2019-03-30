@@ -3,13 +3,13 @@ DROP TABLE IF EXISTS TRIP CASCADE;
 CREATE TABLE TRIP (
 	
 	sched_id		INT,
-	seats_left		INT,
+	seats_left		INT NOT NULL,
 	rs_id			INT,
-	trip_distance 	NUMERIC(6, 2),
-	trip_cost		NUMERIC(6, 2),
-	trip_time		INTERVAL,
-	arrival_time	TIME,
-	depart_station	INT,
+	trip_distance 	NUMERIC(6, 2) NOT NULL,
+	trip_cost		NUMERIC(6, 2) NOT NULL,
+	trip_time		INTERVAL NOT NULL,
+	arrival_time	TIME NOT NULL,
+	depart_station	INT NOT NULL,
 	rail_id			INT,
 	trip_id			SERIAL,	
 

@@ -13,5 +13,7 @@ CREATE TABLE BOOKING (
         FOREIGN KEY(passenger) REFERENCES PASSENGER(customer_id),
     
     CONSTRAINT sched_book_FK
-        FOREIGN KEY(trip) REFERENCES TRIP(trip_id)
+        FOREIGN KEY(trip) REFERENCES TRIP(trip_id),
+
+    CONSTRAINT valid_num_tickets CHECK (num_tickets > 0)
 );
