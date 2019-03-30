@@ -189,6 +189,65 @@ $$
 LANGUAGE 'plpgsql';
 
 
+-- Wrapper for single trip route search to order results by specified criteria
+-- order_by_option values:
+-- 1: stops
+-- 2: stations passed
+-- 3: total price
+-- 4: total time
+-- 5: total distance
+-- default: distance
+CREATE OR REPLACE FUNCTION sort_STRS(order_by_option INT, order_asc BOOLEAN,
+	arr_st INT, dest_st INT, target_day INT)
+RETURNS TABLE (
+	route_id 				INT,
+	sched_id				INT,
+	num_stations_passed 	BIGINT,
+	num_stops   			INT,
+	total_price				NUMERIC(6,2),
+	total_distance			NUMERIC(6,2),
+	total_time				INTERVAL
+)
+AS $$
+BEGIN
+	IF order_asc
+	THEN 
+		RETURN QUERY SELECT * FROM 
+		single_trip_route_search(arr_st, dest_st, target_day) as res
+			 ORDER BY CASE 
+			 WHEN order_by_option = 1
+			 	THEN res.num_stops
+			 WHEN order_by_option = 2
+			 	THEN res.num_stations_passed
+			 WHEN order_by_option = 3
+			 	THEN res.total_price
+			 WHEN order_by_option = 4
+			 	THEN EXTRACT(HOUR from res.total_time) + (EXTRACT(MINUTE FROM res.total_time) * 60)
+			 ELSE
+			 	res.total_distance
+			 END ASC;
+	ELSE
+		RETURN QUERY SELECT * FROM 
+		single_trip_route_search(arr_st, dest_st, target_day) as res
+			 ORDER BY CASE 
+			 WHEN order_by_option = 1
+			 	THEN res.num_stops
+			 WHEN order_by_option = 2
+			 	THEN res.num_stations_passed
+			 WHEN order_by_option = 3
+			 	THEN res.total_price
+			 WHEN order_by_option = 4
+			 	THEN EXTRACT(HOUR from res.total_time) + (EXTRACT(MINUTE FROM res.total_time) * 60)
+			 ELSE
+			 	res.total_distance
+			 END DESC;
+	END IF;
+
+END;
+$$
+LANGUAGE 'plpgsql';
+
+
 -- Find all trains that pass through a specific station at a specific
 -- day/time combination: Find the trains that pass through a specific
 -- station on a specific day and time.
