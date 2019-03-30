@@ -70,7 +70,9 @@ BEGIN
 						AND (t.arrival_time BETWEEN depart_time AND arr_time OR
 							 (t.arrival_time - t.trip_time) BETWEEN depart_time AND arr_time))
 			THEN
-				RETURN NULL;
+				RAISE integrity_constraint_violation 
+				USING MESSAGE = 'CONSTRAINT VIOLATION: RAIL ID ' || rail_rec.rail_id ||
+					' is already in use at that day/time combination.';
 			END IF;
 
 
@@ -83,7 +85,9 @@ BEGIN
 			IF next_rs.stops_here AND (arr_time > station_times.close_time OR 
 				arr_time < station_times.open_time)
 			THEN
-				RETURN NULL;
+				RAISE integrity_constraint_violation 
+				USING MESSAGE = 'CONSTRAINT VIOLATION: STATION ID ' || next_rs.station_id ||
+					' is closed at ' || arr_time;
 			END IF;
 
 			IF NEW.is_forward IS TRUE
@@ -131,11 +135,13 @@ AS $$
 DECLARE
 	trip_rec RECORD;
 BEGIN
-	SELECT * FROM TRIP as t WHERE t.trip_id = NEW.trip INTO trip_rec;
+	SELECT DISTINCT * FROM TRIP as t WHERE t.trip_id = NEW.trip INTO trip_rec;
 
 	IF NEW.num_tickets > trip_rec.seats_left
 	THEN
-		RETURN NULL;
+		RAISE integrity_constraint_violation 
+			USING MESSAGE = 'CONSTRAINT VIOLATION: Cannot overbook -- tripID ' || trip_rec.trip_id  ||
+				' only has ' || trip_rec.seats_left || ' seats left.';
 	ELSE
 		UPDATE TRIP
 		SET seats_left = seats_left - NEW.num_tickets

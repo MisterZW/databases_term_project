@@ -1,78 +1,3 @@
--- Find all the trains that do not stop at a specific station: Find all
--- trains that do not stop at a specified station at any time during an
--- entire week.
--- @param target_station	the station_id of the station of interest
-CREATE OR REPLACE FUNCTION trains_which_dont_go_here(target_station INT)
-RETURNS TABLE (
-	train_id	INT
-)
-AS $$
-BEGIN
-	RETURN QUERY SELECT t.train_id FROM TRAIN as t
-							WHERE NOT EXISTS (SELECT DISTINCT s.train_id
-							FROM SCHEDULE AS s, ROUTE_STATIONS AS rs
-							WHERE s.train_id = t.train_id AND
-							s.t_route = rs.route_id AND
-							rs.station_id = target_station AND
-							rs.stops_here IS TRUE);
-END;
-$$
-LANGUAGE 'plpgsql';
-
--- Find any stations through which all trains pass through: Find
--- any stations that all the trains (that are in the system) pass at any
--- time during an entire week.
-
-CREATE OR REPLACE FUNCTION stations_all_trains_pass_through()
-RETURNS TABLE (
-	station_id	INT
-)
-AS $$
-BEGIN
-	RETURN QUERY SELECT st.station_id FROM STATION as st
-				 WHERE NOT EXISTS ( SELECT t.train_id FROM TRAIN as t
-									WHERE NOT EXISTS (SELECT DISTINCT s.train_id
-									FROM SCHEDULE AS s, ROUTE_STATIONS AS rs
-									WHERE s.train_id = t.train_id AND
-									s.t_route = rs.route_id AND
-									rs.station_id = st.station_id ) );
-END;
-$$
-LANGUAGE 'plpgsql';
-
--- Find routes that stop at least at XX% of the Stations they visit:	
--- @param target_percent:	percentage between 10 and 90
-
-CREATE OR REPLACE FUNCTION greater_than_percent_stops(target_percent INT)
-RETURNS TABLE (
-	route_id	INT
-)
-AS $$
-BEGIN
-
-	RETURN QUERY SELECT DISTINCT outside.route_id
-	FROM ROUTE_STATIONS outside
-	WHERE target_percent <= ((SELECT COUNT(station_id) from ROUTE_STATIONS inside
-							   	WHERE stops_here IS TRUE AND inside.route_id = outside.route_id) * 100 / 
-								(SELECT COUNT(station_id) from ROUTE_STATIONS inside2
-								WHERE inside2.route_id = outside.route_id));
-
-END;
-$$
-LANGUAGE 'plpgsql';
-
-
--- Make a reservation for a trip
-CREATE OR REPLACE FUNCTION make_reservation(agent_username VARCHAR, passenger_id INT, trip_id INT, num_tickets INT)
-RETURNS VOID
-AS $$
-BEGIN
-	INSERT INTO BOOKING VALUES(agent_username, passenger_id, trip_id, num_tickets);
-END;
-$$
-LANGUAGE 'plpgsql';
-
-
 -- Insert a new customer in to the system
 CREATE OR REPLACE FUNCTION create_customer_account(fname VARCHAR, lname VARCHAR, email VARCHAR,
 	phone CHAR, street_addr VARCHAR, city VARCHAR, zip CHAR)
@@ -104,6 +29,111 @@ LANGUAGE 'plpgsql';
 --	UPDATE PASSENGER
 --	SET $$old_field = $$new_value
 --	WHERE customer_id = $$id;
+
+
+-- Make a reservation for all trips between arr_station and dest_station on a schedule
+-- Makes reservation as a transaction, so all bookings will fail if any one booking fails
+CREATE OR REPLACE FUNCTION make_reservation(agent_username VARCHAR, passenger_id INT, target_schedule INT, num_tickets INT,
+	arr_station INT, dest_station INT)
+RETURNS VOID
+AS $$
+DECLARE
+	sched_rec RECORD;
+	arr_stat_ord INT;
+	dest_stat_ord INT;
+	trip_cursor REFCURSOR;
+	trip_rec RECORD; 
+BEGIN
+	SELECT * from SCHEDULE as s where s.sched_id = target_schedule INTO sched_rec;
+	arr_stat_ord = get_station_ordinal(sched_rec.t_route, arr_station);
+	dest_stat_ord = get_station_ordinal(sched_rec.t_route, dest_station);
+
+	open trip_cursor FOR SELECT DISTINCT * 
+		FROM TRIP as t
+		WHERE t.sched_id = sched_rec.sched_id
+		AND CASE WHEN arr_stat_ord < dest_stat_ord
+		    	THEN	get_station_ordinal(sched_rec.t_route, t.depart_station) BETWEEN arr_stat_ord AND dest_stat_ord
+		    	ELSE	get_station_ordinal(sched_rec.t_route, t.depart_station) BETWEEN dest_stat_ord AND arr_stat_ord
+		    	END;
+
+	BEGIN
+	LOOP
+		FETCH trip_cursor INTO trip_rec;
+		IF NOT FOUND THEN
+			EXIT;
+		END IF;
+
+		INSERT INTO BOOKING VALUES(agent_username, passenger_id, trip_rec.trip_id, num_tickets);
+	END LOOP;
+	EXCEPTION WHEN integrity_constraint_violation
+		THEN ROLLBACK;
+	END;
+
+END;
+$$
+LANGUAGE 'plpgsql';
+
+
+
+-- Find all trains that do not stop at a specified station at any 
+-- time during an entire week.
+-- @param target_station	the station_id of the station of interest
+CREATE OR REPLACE FUNCTION trains_which_dont_go_here(target_station INT)
+RETURNS TABLE (
+	train_id	INT
+)
+AS $$
+BEGIN
+	RETURN QUERY SELECT t.train_id FROM TRAIN as t
+							WHERE NOT EXISTS (SELECT DISTINCT s.train_id
+							FROM SCHEDULE AS s, ROUTE_STATIONS AS rs
+							WHERE s.train_id = t.train_id AND
+							s.t_route = rs.route_id AND
+							rs.station_id = target_station AND
+							rs.stops_here IS TRUE);
+END;
+$$
+LANGUAGE 'plpgsql';
+
+-- Find any stations that all the trains (that are in the system) pass at any
+-- time during an entire week.
+CREATE OR REPLACE FUNCTION stations_all_trains_pass_through()
+RETURNS TABLE (
+	station_id	INT
+)
+AS $$
+BEGIN
+	RETURN QUERY SELECT st.station_id FROM STATION as st
+				 WHERE NOT EXISTS ( SELECT t.train_id FROM TRAIN as t
+									WHERE NOT EXISTS (SELECT DISTINCT s.train_id
+									FROM SCHEDULE AS s, ROUTE_STATIONS AS rs
+									WHERE s.train_id = t.train_id AND
+									s.t_route = rs.route_id AND
+									rs.station_id = st.station_id ) );
+END;
+$$
+LANGUAGE 'plpgsql';
+
+
+-- Find routes that stop at least at XX% of the Stations they visit:	
+-- @param target_percent:	percentage between 10 and 90
+CREATE OR REPLACE FUNCTION greater_than_percent_stops(target_percent INT)
+RETURNS TABLE (
+	route_id	INT
+)
+AS $$
+BEGIN
+
+	RETURN QUERY SELECT DISTINCT outside.route_id
+	FROM ROUTE_STATIONS outside
+	WHERE target_percent <= ((SELECT COUNT(station_id) from ROUTE_STATIONS inside
+							   	WHERE stops_here IS TRUE AND inside.route_id = outside.route_id) * 100 / 
+								(SELECT COUNT(station_id) from ROUTE_STATIONS inside2
+								WHERE inside2.route_id = outside.route_id));
+
+END;
+$$
+LANGUAGE 'plpgsql';
 
 
 --get the station ordinal
@@ -341,53 +371,29 @@ $$
 LANGUAGE 'plpgsql';
 
 
--- get the distance the train travels to an individual station
--- returns 0 if arr_station and dest_station are the same
--- returns nothing if stations/route combo is invalid
--- returns the distance otherwise (regardless of which station is listed first) 
-CREATE OR REPLACE FUNCTION get_travel_distance(target_route INT, arr_station INT, dest_station INT)
-RETURNS NUMERIC(6,2)
-AS $$
-BEGIN
-	IF arr_station = dest_station
-	THEN 
-		RETURN 0;
-	ELSE
-		RETURN SUM(DISTINCT c.distance) 
-			FROM ROUTE_STATIONS AS rs, CONNECTION as c
-		    WHERE rs.route_id = target_route
-		    AND rs.conn_id IS NOT NULL
-		    AND rs.conn_id = c.conn_id
-		    AND CASE WHEN arr_station < dest_station
-		    	THEN	rs.ordinal BETWEEN get_station_ordinal(target_route, arr_station)
-		    		   AND get_station_ordinal(target_route, dest_station)
-		    	ELSE	rs.ordinal BETWEEN get_station_ordinal(target_route, dest_station)
-		    		   AND get_station_ordinal(target_route, arr_station)
-		    	END;
-	END IF;
-END;
-$$
-LANGUAGE 'plpgsql';
-
 -- get the number of stops on a given route between arr_station and dest_station, inclusive
 -- returns 0 if arr_station and dest_station are the same
 CREATE OR REPLACE FUNCTION get_num_stops(target_route INT, arr_station INT, dest_station INT)
 RETURNS INT
 AS $$
+DECLARE
+	arr_stat_ord INT;
+	dest_stat_ord INT;
 BEGIN
 	IF arr_station = dest_station
 	THEN 
 		RETURN 0;
 	ELSE
+		arr_stat_ord = get_station_ordinal(target_route, arr_station);
+		dest_stat_ord = get_station_ordinal(target_route, dest_station);
+
 		RETURN COUNT(DISTINCT rs.station_id) 
 			FROM ROUTE_STATIONS as rs
 			WHERE rs.route_id = target_route
 			AND rs.stops_here IS TRUE
-			AND CASE WHEN arr_station < dest_station
-		    	THEN	rs.ordinal BETWEEN get_station_ordinal(target_route, arr_station)
-		    		   AND get_station_ordinal(target_route, dest_station)
-		    	ELSE	rs.ordinal BETWEEN get_station_ordinal(target_route, dest_station)
-		    		   AND get_station_ordinal(target_route, arr_station)
+			AND CASE WHEN arr_stat_ord < dest_stat_ord
+		    	THEN	rs.ordinal BETWEEN arr_stat_ord AND dest_stat_ord
+		    	ELSE	rs.ordinal BETWEEN dest_stat_ord AND arr_stat_ord
 		    	END;
 	END IF;
 
@@ -401,19 +407,23 @@ LANGUAGE 'plpgsql';
 CREATE OR REPLACE FUNCTION get_num_stations_passed(target_route INT, arr_station INT, dest_station INT)
 RETURNS INT
 AS $$
+DECLARE
+	arr_stat_ord INT;
+	dest_stat_ord INT;
 BEGIN
 	IF arr_station = dest_station
 	THEN 
 		RETURN 0;
 	ELSE
+		arr_stat_ord = get_station_ordinal(target_route, arr_station);
+		dest_stat_ord = get_station_ordinal(target_route, dest_station);
+
 		RETURN COUNT(DISTINCT rs.station_id) 
 			FROM ROUTE_STATIONS as rs
 			WHERE rs.route_id = target_route
-			AND CASE WHEN arr_station < dest_station
-		    	THEN	rs.ordinal BETWEEN get_station_ordinal(target_route, arr_station)
-		    		   AND get_station_ordinal(target_route, dest_station)
-		    	ELSE	rs.ordinal BETWEEN get_station_ordinal(target_route, dest_station)
-		    		   AND get_station_ordinal(target_route, arr_station)
+			AND CASE WHEN arr_stat_ord < dest_stat_ord
+		    	THEN	rs.ordinal BETWEEN arr_stat_ord AND dest_stat_ord
+		    	ELSE	rs.ordinal BETWEEN dest_stat_ord AND arr_stat_ord
 		    	END;
 	END IF;
 
@@ -441,6 +451,8 @@ END;
 $$
 LANGUAGE 'plpgsql';
 
+
+--returns true if target station is a STOP (NOT just a passed station) on target route
 CREATE OR REPLACE FUNCTION stops_here(target_route INT, target_station INT)
 RETURNS BOOLEAN
 AS $$
