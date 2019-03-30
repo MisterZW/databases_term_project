@@ -110,7 +110,7 @@ LANGUAGE 'plpgsql';
 -- destination station on a specified day of the week
 CREATE OR REPLACE FUNCTION single_trip_route_search(arr_st INT, dest_st INT, target_day INT) 
 RETURNS TABLE (
-	route_id	INT
+	route_id 	INT
 )
 AS $$
 BEGIN
@@ -126,7 +126,7 @@ BEGIN
 				 				AND CASE WHEN s.is_forward IS TRUE
 				 					THEN r1.ordinal < r2.ordinal
 				 					ELSE r1.ordinal > r2.ordinal
-				 					END );
+				 					END);
 END;
 $$
 LANGUAGE 'plpgsql';
@@ -224,20 +224,6 @@ END;
 $$
 LANGUAGE 'plpgsql';
 
-/*
-
--- get the arrival/departure time of the train from an individual station
-CREATE OR REPLACE FUNCTION get_depart_time(target_route INT, target_station INT)
-RETURNS time
-AS $$
-
-
-
-END;
-$$
-LANGUAGE 'plpgsql';
-
-*/
 
 --get the station ordinal
 CREATE OR REPLACE FUNCTION get_station_ordinal(target_route INT, target_station INT)
@@ -353,6 +339,42 @@ END;
 $$
 LANGUAGE 'plpgsql';
 
+CREATE OR REPLACE FUNCTION stops_here(target_route INT, target_station INT)
+RETURNS BOOLEAN
+AS $$
+BEGIN
+	RETURN rs.stops_here FROM ROUTE_STATIONS as rs
+	WHERE rs.route_id = target_route AND rs.station_id = target_station;
+END;
+$$
+LANGUAGE 'plpgsql';
 
--- Find the availability of a route at every stop on a specific day
--- and time:
+
+-- Find the availability of a route at every stop on a specific day and time
+-- Will only return trips which stop either at the depart or destination stations
+CREATE OR REPLACE FUNCTION find_route_availability(target_route INT, target_day INT, target_time TIME)
+RETURNS TABLE (
+	departure_station					INT,
+	destination_station					INT,
+	stops_at_depart_station 			BOOLEAN,
+	stops_at_dest_station 				BOOLEAN,
+	ordinal 							INT,
+	seats_left							INT
+)
+AS $$
+BEGIN
+	RETURN QUERY SELECT DISTINCT t.depart_station, rs.station_id, stops_here(target_route, t.depart_station), 
+				rs.stops_here, rs.ordinal, t.seats_left
+				 FROM TRIP as t, ROUTE_STATIONS as rs, SCHEDULE as s
+				 WHERE s.sched_day = target_day
+				 AND s.sched_time = target_time
+				 AND s.t_route = target_route
+				 AND t.sched_id = s.sched_id
+				 AND (stops_here(target_route, t.depart_station) IS TRUE OR rs.stops_here IS TRUE)
+				 AND rs.route_id = target_route
+				 AND t.rs_id = rs.rs_id;
+END;
+$$
+LANGUAGE 'plpgsql';
+
+

@@ -4,7 +4,7 @@ CREATE TABLE BOOKING (
 	agent			VARCHAR(40),
     passenger       INT,
     trip            INT,
-    num_tickets     SMALLINT,
+    num_tickets     INT,
 
     CONSTRAINT agent_FK
     	FOREIGN KEY(agent) REFERENCES AGENT(username),

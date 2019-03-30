@@ -1,7 +1,7 @@
 DROP TABLE IF EXISTS ROUTE_STATIONS CASCADE;
 
 CREATE TABLE ROUTE_STATIONS (
-    ordinal         	SMALLINT,
+    ordinal         	INT,
     stops_here      	BOOLEAN NOT NULL,
     station_id			INT,
     route_id			INT,

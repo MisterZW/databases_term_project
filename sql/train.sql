@@ -1,7 +1,7 @@
 DROP TABLE IF EXISTS TRAIN CASCADE;
 
 CREATE TABLE TRAIN (
-    top_speed       SMALLINT,
+    top_speed       INT,
     seats           INT,
     ppm             NUMERIC(6, 2),
     train_id        SERIAL,

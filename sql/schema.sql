@@ -9,7 +9,7 @@ CREATE TABLE AGENT (
 DROP TABLE IF EXISTS RAIL_LINE CASCADE;
 
 CREATE TABLE RAIL_LINE (
-    speed_limit     SMALLINT,
+    speed_limit     INT,
     rail_id         SERIAL,
 
     CONSTRAINT Rail_PK PRIMARY KEY(rail_id)
@@ -17,7 +17,7 @@ CREATE TABLE RAIL_LINE (
 DROP TABLE IF EXISTS TRAIN CASCADE;
 
 CREATE TABLE TRAIN (
-    top_speed       SMALLINT,
+    top_speed       INT,
     seats           INT,
     ppm             NUMERIC(6, 2),
     train_id        SERIAL,
@@ -82,7 +82,7 @@ CREATE TABLE PASSENGER (
 DROP TABLE IF EXISTS ROUTE_STATIONS CASCADE;
 
 CREATE TABLE ROUTE_STATIONS (
-    ordinal         	SMALLINT,
+    ordinal         	INT,
     stops_here      	BOOLEAN NOT NULL,
     station_id			INT,
     route_id			INT,
@@ -128,12 +128,16 @@ CREATE TABLE TRIP (
 	trip_cost		NUMERIC(6, 2),
 	trip_time		INTERVAL,
 	arrival_time	TIME,
+	depart_station	INT,
 	trip_id			SERIAL,	
 
 	CONSTRAINT trip_pk PRIMARY KEY (trip_id),
 
 	CONSTRAINT rs_id_fk 
 		FOREIGN KEY(rs_id) REFERENCES ROUTE_STATIONS(rs_id),
+
+	CONSTRAINT rs_ds_fk 
+		FOREIGN KEY(depart_station) REFERENCES STATION(station_id),
 
 	CONSTRAINT trip_sched_fk 
 		FOREIGN KEY(sched_id) REFERENCES SCHEDULE(sched_id)
@@ -146,7 +150,7 @@ CREATE TABLE BOOKING (
 	agent			VARCHAR(40),
     passenger       INT,
     trip            INT,
-    num_tickets     SMALLINT,
+    num_tickets     INT,
 
     CONSTRAINT agent_FK
     	FOREIGN KEY(agent) REFERENCES AGENT(username),
@@ -164,18 +168,17 @@ RETURNS TRIGGER
 AS $$
 DECLARE
 	train_rec RECORD;
-	rs_cursor CURSOR FOR SELECT rs_id, conn_id
-		FROM ROUTE_STATIONS AS rs 
-		WHERE rs.route_id = NEW.t_route;
+	rs_cursor REFCURSOR;
 	next_rs RECORD;
 	conn_rec RECORD;
 	rail_rec RECORD;
 	t_cost NUMERIC(6, 2);
-	temp_time NUMERIC(6,2);
+	temp_time NUMERIC(6, 2);
 	hours INT;
 	minutes INT;
 	t_time INTERVAL;
 	arr_time TIME;
+	depart_station INT;
 BEGIN
 	SELECT * 
 		FROM TRAIN as t 
@@ -183,7 +186,22 @@ BEGIN
 		into train_rec;
 
 	arr_time = NEW.sched_time;
-	open rs_cursor;
+
+	IF NEW.is_forward IS TRUE
+	THEN
+		open rs_cursor FOR
+		SELECT rs_id, conn_id, ordinal, station_id
+		FROM ROUTE_STATIONS AS rs 
+		WHERE rs.route_id = NEW.t_route
+		ORDER BY ordinal ASC;
+	ELSE
+		open rs_cursor FOR
+		SELECT rs_id, conn_id, ordinal, station_id
+		FROM ROUTE_STATIONS AS rs 
+		WHERE rs.route_id = NEW.t_route
+		ORDER BY ordinal DESC;
+	END IF;
+
 
 	LOOP
 		FETCH rs_cursor INTO next_rs;
@@ -206,10 +224,17 @@ BEGIN
 			t_time = make_interval(hours := hours, mins := minutes);
 			arr_time = arr_time + t_time;
 
+			IF next_rs.station_id = conn_rec.station_1
+			THEN
+				depart_station = conn_rec.station_2;
+			ELSE
+				depart_station = conn_rec.station_1;
+			END IF;
+
 			INSERT INTO TRIP (sched_id, seats_left, rs_id, trip_distance,
-				trip_cost, trip_time, arrival_time)
+				trip_cost, trip_time, arrival_time, depart_station)
 			VALUES(NEW.sched_id, train_rec.seats, next_rs.rs_id,
-				conn_rec.distance, t_cost, t_time, arr_time);
+				conn_rec.distance, t_cost, t_time, arr_time, depart_station);
 		END IF;
 	END LOOP;
 
