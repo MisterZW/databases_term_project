@@ -167,6 +167,7 @@ CREATE TABLE BOOKING (
 );
 DROP FUNCTION IF EXISTS create_trips() CASCADE;
 
+--BUILD TRACKING OF EACH LEG OF ACTIVE TRIPS DYNAMICALLY FROM SCHEDULE--
 CREATE FUNCTION create_trips()
 RETURNS TRIGGER
 AS $$
@@ -184,6 +185,7 @@ DECLARE
 	arr_time TIME;
 	depart_time TIME;
 	depart_station INT;
+	station_times RECORD;
 BEGIN
 	SELECT * 
 		FROM TRAIN as t 
@@ -196,18 +198,15 @@ BEGIN
 	IF NEW.is_forward IS TRUE
 	THEN
 		open rs_cursor FOR
-		SELECT rs_id, conn_id, ordinal, station_id
-		FROM ROUTE_STATIONS AS rs 
+		SELECT * FROM ROUTE_STATIONS AS rs 
 		WHERE rs.route_id = NEW.t_route
 		ORDER BY ordinal ASC;
 	ELSE
 		open rs_cursor FOR
-		SELECT rs_id, conn_id, ordinal, station_id
-		FROM ROUTE_STATIONS AS rs 
+		SELECT * FROM ROUTE_STATIONS AS rs 
 		WHERE rs.route_id = NEW.t_route
 		ORDER BY ordinal DESC;
 	END IF;
-
 
 	LOOP
 		FETCH rs_cursor INTO next_rs;
@@ -230,7 +229,6 @@ BEGIN
 			t_time = make_interval(hours := hours, mins := minutes);
 			arr_time = arr_time + t_time;
 			
-
 			-- CONSTRAINT TO ENSURE NOT OVERLAPPING ANOTHER TRAIN'S RAIL USE --
 			IF EXISTS (SELECT * FROM SCHEDULE as s, TRIP as t
 						WHERE s.sched_day = NEW.sched_day
@@ -242,7 +240,18 @@ BEGIN
 				RETURN NULL;
 			END IF;
 
+
 			depart_time = arr_time;
+
+			-- CONSTRAINT TO ENSURE TRAINS DO NOT STOP AT CLOSED STATIONS--
+			SELECT s.close_time, s.open_time FROM STATION as s 
+				WHERE s.station_id = next_rs.station_id INTO station_times;
+
+			IF next_rs.stops_here AND (arr_time > station_times.close_time OR 
+				arr_time < station_times.open_time)
+			THEN
+				RETURN NULL;
+			END IF;
 
 			IF next_rs.station_id = conn_rec.station_1
 			THEN

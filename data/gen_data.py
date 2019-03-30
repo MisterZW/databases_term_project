@@ -31,8 +31,8 @@ with open('stations.dat', 'w+') as station_file:
 		address = '123 Fake Street'
 		city = 'Faketown'
 		zip_code = '15217'
-		open_hour_options = [5, 6, 7, 8, 9]
-		close_hour_options = [20, 21, 22, 23]
+		open_hour_options = [5, 6, 7]
+		close_hour_options = [21, 22, 23]
 		minute_options = [0, 15, 30, 45]
 		o = time(random.choice(open_hour_options), random.choice(minute_options))
 		c = time(random.choice(close_hour_options), random.choice(minute_options))
@@ -100,7 +100,7 @@ with open('connections.dat', 'w+') as conn_file:
 			station2_id = i+1
 
 		rail_id = (int)(i / grid_width) + 1
-		distance = randint(5, 50)
+		distance = randint(2, 50)
 		distance += random.choice(fractions)
 		connection = (station1_id, station2_id, rail_id, distance)
 
@@ -121,7 +121,7 @@ with open('connections.dat', 'w+') as conn_file:
 			station2_id = (i + grid_width)
 
 		rail_id = (int)(i % grid_width) + grid_width + 1
-		distance = randint(5, 1000)
+		distance = randint(2, 50)
 		distance += random.choice(fractions)
 		connection = (station1_id, station2_id, rail_id, distance)
 
@@ -199,7 +199,7 @@ with open('schedules.dat', 'w+') as sched_file:
 	grid_width = (int)(NUM_RAIL_LINES / 2)
 
 	for day in range(1, 7):
-		sched_time = time(hour = randint(10, 16))
+		sched_time = time(hour = randint(8, 10))
 
 		for rail in range(1, NUM_RAIL_LINES + 1):
 			train_route = rail
