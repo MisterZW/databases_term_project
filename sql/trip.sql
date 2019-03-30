@@ -10,6 +10,7 @@ CREATE TABLE TRIP (
 	trip_time		INTERVAL,
 	arrival_time	TIME,
 	depart_station	INT,
+	rail_id			INT,
 	trip_id			SERIAL,	
 
 	CONSTRAINT trip_pk PRIMARY KEY (trip_id),
@@ -19,6 +20,9 @@ CREATE TABLE TRIP (
 
 	CONSTRAINT rs_ds_fk 
 		FOREIGN KEY(depart_station) REFERENCES STATION(station_id),
+
+	CONSTRAINT rid_FK
+		FOREIGN KEY(rail_id) REFERENCES RAIL_LINE(rail_id),
 
 	CONSTRAINT trip_sched_fk 
 		FOREIGN KEY(sched_id) REFERENCES SCHEDULE(sched_id)

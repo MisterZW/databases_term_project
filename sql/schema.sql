@@ -129,6 +129,7 @@ CREATE TABLE TRIP (
 	trip_time		INTERVAL,
 	arrival_time	TIME,
 	depart_station	INT,
+	rail_id			INT,
 	trip_id			SERIAL,	
 
 	CONSTRAINT trip_pk PRIMARY KEY (trip_id),
@@ -138,6 +139,9 @@ CREATE TABLE TRIP (
 
 	CONSTRAINT rs_ds_fk 
 		FOREIGN KEY(depart_station) REFERENCES STATION(station_id),
+
+	CONSTRAINT rid_FK
+		FOREIGN KEY(rail_id) REFERENCES RAIL_LINE(rail_id),
 
 	CONSTRAINT trip_sched_fk 
 		FOREIGN KEY(sched_id) REFERENCES SCHEDULE(sched_id)
@@ -178,6 +182,7 @@ DECLARE
 	minutes INT;
 	t_time INTERVAL;
 	arr_time TIME;
+	depart_time TIME;
 	depart_station INT;
 BEGIN
 	SELECT * 
@@ -186,6 +191,7 @@ BEGIN
 		into train_rec;
 
 	arr_time = NEW.sched_time;
+	depart_time = NEW.sched_time;
 
 	IF NEW.is_forward IS TRUE
 	THEN
@@ -223,6 +229,20 @@ BEGIN
 
 			t_time = make_interval(hours := hours, mins := minutes);
 			arr_time = arr_time + t_time;
+			
+
+			-- CONSTRAINT TO ENSURE NOT OVERLAPPING ANOTHER TRAIN'S RAIL USE --
+			IF EXISTS (SELECT * FROM SCHEDULE as s, TRIP as t
+						WHERE s.sched_day = NEW.sched_day
+						AND t.sched_id = s.sched_id
+						AND t.rail_id = rail_rec.rail_id
+						AND (t.arrival_time BETWEEN depart_time AND arr_time OR
+							 (t.arrival_time - t.trip_time) BETWEEN depart_time AND arr_time))
+			THEN
+				RETURN NULL;
+			END IF;
+
+			depart_time = arr_time;
 
 			IF next_rs.station_id = conn_rec.station_1
 			THEN
@@ -232,9 +252,9 @@ BEGIN
 			END IF;
 
 			INSERT INTO TRIP (sched_id, seats_left, rs_id, trip_distance,
-				trip_cost, trip_time, arrival_time, depart_station)
+				trip_cost, trip_time, arrival_time, depart_station, rail_id)
 			VALUES(NEW.sched_id, train_rec.seats, next_rs.rs_id,
-				conn_rec.distance, t_cost, t_time, arr_time, depart_station);
+				conn_rec.distance, t_cost, t_time, arr_time, depart_station, rail_rec.rail_id);
 		END IF;
 	END LOOP;
 
