@@ -201,9 +201,12 @@ $$
 LANGUAGE 'plpgsql';
 
 
--- Find all routes that stop at a specified arrival station and then at the specified
--- destination station on a specified day of the week
--- excludes trip results which have no available seats
+/******************************************************************************************* 
+* Find all routes that stop at a specified arrival station and then at the specified
+* destination station on a specified day of the week
+*
+* excludes trip results which have no available seats
+*******************************************************************************************/
 CREATE OR REPLACE FUNCTION single_trip_route_search(arr_st INT, dest_st INT, target_day INT) 
 RETURNS TABLE (
     route_id                INT,
@@ -246,77 +249,66 @@ END;
 $$
 LANGUAGE 'plpgsql';
 
-/****************************************************************************
-* Wrapper for single trip route search to order results by specified criteria
-* order_by_option values:
+
+
+/******************************************************************************************
+* Combinatory search function: Find all route combinations that stop
+* at the specified Arrival Station and then at the specified Destination
+* Station on a specified day of the week.
 *
-* 1: stops
-* 2: stations passed
-* 3: total price
-* 4: total time
-* 5: total distance
-* default: distance
-*
-*
-* TO PRODUCE PAGINATED RESULTS:
-*
-* SELECT * FROM sort_STRS([parameters])
-* FETCH FIRST 10 ROWS ONLY; 
-*
-* SELECT * FROM sort_STRS([parameters])
-* OFFSET [num_rows_already_retured]
-* FETCH NEXT 10 ROWS;
-*
-****************************************************************************/
-CREATE OR REPLACE FUNCTION sort_STRS(order_by_option INT, order_asc BOOLEAN,
-    arr_st INT, dest_st INT, target_day INT)
+* Returns a table of integer arrays representing possible combinations of trip IDs
+* which link source to sink in the graph (taking into account day and seats available)
+* 
+* Also returns desciptive statistics about the route which can be used to sort results
+******************************************************************************************/
+
+CREATE OR REPLACE FUNCTION combo_search(first_station INT, last_station INT, target_day INT)
 RETURNS TABLE (
-    route_id                INT,
-    sched_id                INT,
-    num_stations_passed     BIGINT,
+    full_path               integer [],
+    num_stations_passed     INT,
     num_stops               INT,
-    total_price             NUMERIC(6,2),
-    total_distance          NUMERIC(6,2),
+    total_price             NUMERIC,
+    total_distance          NUMERIC,
     total_time              INTERVAL
 )
 AS $$
 BEGIN
-    IF order_asc
-    THEN 
-        RETURN QUERY SELECT * FROM 
-        single_trip_route_search(arr_st, dest_st, target_day) as res
-             ORDER BY CASE 
-             WHEN order_by_option = 1
-                THEN res.num_stops
-             WHEN order_by_option = 2
-                THEN res.num_stations_passed
-             WHEN order_by_option = 3
-                THEN res.total_price
-             WHEN order_by_option = 4
-                THEN EXTRACT(HOUR from res.total_time) + (EXTRACT(MINUTE FROM res.total_time) * 60)
-             ELSE
-                res.total_distance
-             END ASC;
-    ELSE
-        RETURN QUERY SELECT * FROM 
-        single_trip_route_search(arr_st, dest_st, target_day) as res
-             ORDER BY CASE 
-             WHEN order_by_option = 1
-                THEN res.num_stops
-             WHEN order_by_option = 2
-                THEN res.num_stations_passed
-             WHEN order_by_option = 3
-                THEN res.total_price
-             WHEN order_by_option = 4
-                THEN EXTRACT(HOUR from res.total_time) + (EXTRACT(MINUTE FROM res.total_time) * 60)
-             ELSE
-                res.total_distance
-             END DESC;
-    END IF;
+    RETURN QUERY
+        WITH RECURSIVE combo(id, source, dest, depth, day, t_time, full_path, num_stops,
+                total_price, total_distance, total_time) AS (
+            SELECT t.trip_id, t.depart_station, rs.station_id, 1, s.sched_day, t.arrival_time, 
+            ARRAY [ t.trip_id ] as full_path, 1 + (CASE WHEN rs.stops_here IS TRUE THEN 1 ELSE 0 END), 
+                t.trip_cost, t.trip_distance, t.trip_time
+            FROM TRIP as t, SCHEDULE as s, ROUTE_STATIONS as rs
+            WHERE t.depart_station = first_station
+                AND t.sched_id = s.sched_id
+                AND s.sched_day = target_day
+                AND rs.rs_id = t.rs_id
+                AND t.seats_left > 0
 
+        UNION
+            
+            SELECT tr.trip_id, c.source, rs2.station_id, c.depth + 1, s2.sched_day, tr.arrival_time,
+                array_append(c.full_path, tr.trip_id), c.num_stops + (CASE WHEN rs2.stops_here IS TRUE THEN 1 ELSE 0 END),
+                CAST( (c.total_price + tr.trip_cost) AS NUMERIC(6,2) ), 
+                CAST( (c.total_distance + tr.trip_distance) AS NUMERIC(6,2) ), 
+                (c.total_time + tr.trip_time)
+            FROM TRIP as tr, SCHEDULE as s2, ROUTE_STATIONS as rs2, combo as c
+            WHERE tr.depart_station = c.dest
+                AND s2.sched_day = c.day
+                AND tr.sched_id = s2.sched_id
+                AND rs2.rs_id = tr.rs_id
+                AND tr.seats_left > 0
+                AND tr.arrival_time > c.t_time
+        )
+        SELECT co.full_path, co.depth + 1 as num_stations_passed, co.num_stops, co.total_price,
+            co.total_distance, co.total_time
+        FROM combo as co
+        WHERE co.dest = last_station;
 END;
 $$
 LANGUAGE 'plpgsql';
+
 
 
 -- Find all trains that pass through a specific station at a specific
@@ -449,35 +441,6 @@ $$
 LANGUAGE 'plpgsql';
 
 
--- get the number of stops on a given route between arr_station and dest_station, inclusive
--- returns 0 if arr_station and dest_station are the same
-CREATE OR REPLACE FUNCTION get_num_stations_passed(target_route INT, arr_station INT, dest_station INT)
-RETURNS INT
-AS $$
-DECLARE
-    arr_stat_ord INT;
-    dest_stat_ord INT;
-BEGIN
-    IF arr_station = dest_station
-    THEN 
-        RETURN 0;
-    ELSE
-        arr_stat_ord = get_station_ordinal(target_route, arr_station);
-        dest_stat_ord = get_station_ordinal(target_route, dest_station);
-
-        RETURN COUNT(DISTINCT rs.station_id) 
-            FROM ROUTE_STATIONS as rs
-            WHERE rs.route_id = target_route
-            AND CASE WHEN arr_stat_ord < dest_stat_ord
-                THEN    rs.ordinal BETWEEN arr_stat_ord AND dest_stat_ord
-                ELSE    rs.ordinal BETWEEN dest_stat_ord AND arr_stat_ord
-                END;
-    END IF;
-
-END;
-$$
-LANGUAGE 'plpgsql';
-
 
 -- Display all schedules of a route for the week
 CREATE OR REPLACE FUNCTION get_route_schedule(target_route INT)
@@ -500,40 +463,142 @@ LANGUAGE 'plpgsql';
 
 
 
--- beginnings of a combinatory search function for expressrailway
--- currently returns a table of integer arrays representing possible combinations of trips
--- which link source to sink in the graph (taking into account day and seats available)
-CREATE OR REPLACE FUNCTION combo_search(first_station INT, last_station INT, target_day INT)
+/****************************************************************************
+* Wrapper for single trip route search to order results by specified criteria
+* order_by_option values:
+*
+* 1: stops
+* 2: stations passed
+* 3: total price
+* 4: total time
+* 5: total distance
+*
+*
+* TO PRODUCE PAGINATED RESULTS:
+*
+* SELECT * FROM sort_STRS([parameters])
+* FETCH FIRST 10 ROWS ONLY; 
+*
+* SELECT * FROM sort_STRS([parameters])
+* OFFSET [num_rows_already_retured]
+* FETCH NEXT 10 ROWS;
+*
+****************************************************************************/
+CREATE OR REPLACE FUNCTION sort_STRS(order_by_option INT, order_asc BOOLEAN,
+    arr_st INT, dest_st INT, target_day INT)
 RETURNS TABLE (
-    full_path  integer []
+    route_id                INT,
+    sched_id                INT,
+    num_stations_passed     BIGINT,
+    num_stops               INT,
+    total_price             NUMERIC(6,2),
+    total_distance          NUMERIC(6,2),
+    total_time              INTERVAL
 )
 AS $$
 BEGIN
-    RETURN QUERY
-        WITH RECURSIVE combo(id, source, dest, depth, day, t_time, full_path) AS (
-            SELECT t.trip_id, t.depart_station, rs.station_id, 1, s.sched_day, t.arrival_time, 
-            ARRAY [ t.trip_id ] as full_path
-            FROM TRIP as t, SCHEDULE as s, ROUTE_STATIONS as rs
-            WHERE t.depart_station = first_station
-                AND t.sched_id = s.sched_id
-                AND s.sched_day = target_day
-                AND rs.rs_id = t.rs_id
-                AND t.seats_left > 0
+    IF order_asc
+    THEN 
+        RETURN QUERY SELECT * FROM 
+        single_trip_route_search(arr_st, dest_st, target_day) as res
+             ORDER BY CASE 
+             WHEN order_by_option = 1
+                THEN res.num_stops
+             WHEN order_by_option = 2
+                THEN res.num_stations_passed
+             WHEN order_by_option = 3
+                THEN res.total_price
+             WHEN order_by_option = 4
+                THEN EXTRACT(HOUR from res.total_time) + (EXTRACT(MINUTE FROM res.total_time) * 60)
+             ELSE
+                res.total_distance
+             END ASC;
+    ELSE
+        RETURN QUERY SELECT * FROM 
+        single_trip_route_search(arr_st, dest_st, target_day) as res
+             ORDER BY CASE 
+             WHEN order_by_option = 1
+                THEN res.num_stops
+             WHEN order_by_option = 2
+                THEN res.num_stations_passed
+             WHEN order_by_option = 3
+                THEN res.total_price
+             WHEN order_by_option = 4
+                THEN EXTRACT(HOUR from res.total_time) + (EXTRACT(MINUTE FROM res.total_time) * 60)
+             ELSE
+                res.total_distance
+             END DESC;
+    END IF;
+END;
+$$
+LANGUAGE 'plpgsql';
 
-        UNION
-            
-            SELECT tr.trip_id, combo.source, rs2.station_id, combo.depth + 1, s2.sched_day, tr.arrival_time,
-                array_append(combo.full_path, tr.trip_id)
-            FROM TRIP as tr, SCHEDULE as s2, ROUTE_STATIONS as rs2, combo
-            WHERE tr.depart_station = combo.dest
-                AND s2.sched_day = combo.day
-                AND tr.sched_id = s2.sched_id
-                AND rs2.rs_id = tr.rs_id
-                AND tr.seats_left > 0
-                AND tr.arrival_time > combo.t_time
-        )
-        SELECT DISTINCT combo.full_path FROM combo
-        WHERE combo.dest = last_station;
+
+
+/****************************************************************************
+* Wrapper for combo_search to order results by specified criteria
+* order_by_option values:
+*
+* 1: stops
+* 2: stations passed
+* 3: total price
+* 4: total time
+* 5: total distance
+*
+* TO PRODUCE PAGINATED RESULTS:
+*
+* SELECT * FROM sort_CTRS([parameters])
+* FETCH FIRST 10 ROWS ONLY; 
+*
+* SELECT * FROM sort_CTRS([parameters])
+* OFFSET [num_rows_already_retured]
+* FETCH NEXT 10 ROWS;
+*
+****************************************************************************/
+CREATE OR REPLACE FUNCTION sort_CTRS(order_by_option INT, order_asc BOOLEAN,
+    arr_st INT, dest_st INT, target_day INT)
+RETURNS TABLE (
+    full_path               integer [],
+    num_stations_passed     INT,
+    num_stops               INT,
+    total_price             NUMERIC,
+    total_distance          NUMERIC,
+    total_time              INTERVAL
+)
+AS $$
+BEGIN
+    IF order_asc
+    THEN 
+        RETURN QUERY SELECT * FROM 
+        combo_search(arr_st, dest_st, target_day) as res
+             ORDER BY CASE 
+             WHEN order_by_option = 1
+                THEN res.num_stops
+             WHEN order_by_option = 2
+                THEN res.num_stations_passed
+             WHEN order_by_option = 3
+                THEN res.total_price
+             WHEN order_by_option = 4
+                THEN EXTRACT(HOUR from res.total_time) + (EXTRACT(MINUTE FROM res.total_time) * 60)
+             ELSE
+                res.total_distance
+             END ASC;
+    ELSE
+        RETURN QUERY SELECT * FROM 
+        combo_search(arr_st, dest_st, target_day) as res
+             ORDER BY CASE 
+             WHEN order_by_option = 1
+                THEN res.num_stops
+             WHEN order_by_option = 2
+                THEN res.num_stations_passed
+             WHEN order_by_option = 3
+                THEN res.total_price
+             WHEN order_by_option = 4
+                THEN EXTRACT(HOUR from res.total_time) + (EXTRACT(MINUTE FROM res.total_time) * 60)
+             ELSE
+                res.total_distance
+             END DESC;
+    END IF;
 END;
 $$
 LANGUAGE 'plpgsql';
