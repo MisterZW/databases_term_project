@@ -238,7 +238,6 @@ with open('trips.dat', 'w+') as trip_file:
 
 """
 
-
 # build bookings
 with open('bookings.dat', 'w+') as book_file:
 	book_file.write('BOOKING\n')
@@ -246,7 +245,7 @@ with open('bookings.dat', 'w+') as book_file:
 		for i in range(5):
 			passenger_id = randint(1, NUM_PASSENGERS)
 			agent_username = 'agent' + str(randint(0, NUM_AGENTS-1))
-			num_tickets = randint(0, 10)
+			num_tickets = randint(1, 10)
 
 			booking = (agent_username, passenger_id, sched_id, num_tickets)
 			book_file.write( str(booking) + '\n' )

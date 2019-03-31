@@ -90,21 +90,12 @@ BEGIN
 					' is closed at ' || arr_time;
 			END IF;
 
-			IF NEW.is_forward IS TRUE
+
+			IF next_rs.station_id = conn_rec.station_1
 			THEN
-				IF next_rs.station_id = conn_rec.station_1
-				THEN
-					depart_station = conn_rec.station_2;
-				ELSE
-					depart_station = conn_rec.station_1;
-				END IF;
+				depart_station = conn_rec.station_2;
 			ELSE
-				IF next_rs.station_id = conn_rec.station_1
-				THEN
-					depart_station = conn_rec.station_1;
-				ELSE
-					depart_station = conn_rec.station_2;
-				END IF;
+				depart_station = conn_rec.station_1;
 			END IF;
 
 			INSERT INTO TRIP (sched_id, seats_left, rs_id, trip_distance,

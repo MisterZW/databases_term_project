@@ -156,33 +156,58 @@ END;
 $$
 LANGUAGE 'plpgsql';
 
--- Returns true if all required trips on the schedule have at least 1 seat on target day  
--- Otherwise returns false
-CREATE OR REPLACE FUNCTION is_available(target_schedule INT, ord_1 INT, ord_2 INT)
+--returns true if target station is a STOP (NOT just a passed station) on target route
+CREATE OR REPLACE FUNCTION stops_here(target_route INT, target_station INT)
 RETURNS BOOLEAN
 AS $$
 BEGIN
-	IF EXISTS(SELECT trip_id 
-		 	FROM schedule as s, TRIP as t
-			WHERE s.sched_id = t.sched_id
-			AND CASE WHEN ord_1 < ord_2
-				THEN get_station_ordinal(s.t_route, t.depart_station) BETWEEN ord_1 AND ord_2
-				ELSE get_station_ordinal(s.t_route, t.depart_station) BETWEEN ord_2 AND ord_1
-				END
-			AND t.seats_left <= 0)
-	THEN
-		RETURN FALSE;
-	ELSE
-		RETURN TRUE;
-	END IF; 
-END
+	RETURN rs.stops_here FROM ROUTE_STATIONS as rs
+	WHERE rs.route_id = target_route AND rs.station_id = target_station;
+END;
+$$
+LANGUAGE 'plpgsql';
+
+
+-- Find the availability of a route at every stop on a specific day and time
+-- Will only return trips which stop either at the depart or destination stations
+CREATE OR REPLACE FUNCTION find_route_availability(target_route INT, target_day INT, target_time TIME)
+RETURNS TABLE (
+	departure_station					INT,
+	destination_station					INT,
+	stops_at_depart_station 			BOOLEAN,
+	stops_at_dest_station 				BOOLEAN,
+	ordinal 							INT,
+	seats_left							INT
+)
+AS $$
+BEGIN
+	RETURN QUERY SELECT DISTINCT t.depart_station, rs.station_id, stops_here(target_route, t.depart_station), 
+				rs.stops_here, rs.ordinal, t.seats_left
+				 FROM TRIP as t, ROUTE_STATIONS as rs, SCHEDULE as s
+				 WHERE s.sched_day = target_day
+				 AND s.sched_time = target_time
+				 AND s.t_route = target_route
+				 AND t.sched_id = s.sched_id
+				 AND (stops_here(target_route, t.depart_station) IS TRUE OR rs.stops_here IS TRUE)
+				 AND rs.route_id = target_route
+				 AND t.rs_id = rs.rs_id;
+END;
 $$
 LANGUAGE 'plpgsql';
 
 
 -- Find all routes that stop at a specified arrival station and then at the specified
 -- destination station on a specified day of the week
--- excludes trip results 
+-- excludes trip results which have no available seats
+
+-- TO PRODUCE PAGINATED RESULTS:
+
+-- SELECT * FROM single_trip_route_search([parameters])
+-- FETCH FIRST 10 ROWS ONLY; 
+
+-- SELECT * FROM single_trip_route_search([parameters])
+-- OFFSET [num_rows_already_retured]
+-- FETCH NEXT 10 ROWS;
 CREATE OR REPLACE FUNCTION single_trip_route_search(arr_st INT, dest_st INT, target_day INT) 
 RETURNS TABLE (
 	route_id 				INT,
@@ -214,7 +239,8 @@ BEGIN
 			 				AND r2.station_id = dest_st
 			 				AND r1.stops_here IS TRUE
 			 				AND r2.stops_here IS TRUE
-			 				AND is_available(s.sched_id, r1.ordinal, r2.ordinal) IS TRUE
+			 				AND NOT EXISTS (SELECT * FROM find_route_availability(s.t_route, s.sched_day, s.sched_time)
+			 					WHERE seats_left <= 0)
 			 				AND CASE WHEN s.is_forward IS TRUE
 			 					THEN r1.ordinal < r2.ordinal
 			 					ELSE r1.ordinal > r2.ordinal
@@ -444,7 +470,7 @@ $$
 LANGUAGE 'plpgsql';
 
 
--- Display the schedule of a route
+-- Display all schedules of a route for the week
 CREATE OR REPLACE FUNCTION get_route_schedule(target_route INT)
 RETURNS TABLE (
 	departure_day		INT,
@@ -462,45 +488,3 @@ BEGIN
 END;
 $$
 LANGUAGE 'plpgsql';
-
-
---returns true if target station is a STOP (NOT just a passed station) on target route
-CREATE OR REPLACE FUNCTION stops_here(target_route INT, target_station INT)
-RETURNS BOOLEAN
-AS $$
-BEGIN
-	RETURN rs.stops_here FROM ROUTE_STATIONS as rs
-	WHERE rs.route_id = target_route AND rs.station_id = target_station;
-END;
-$$
-LANGUAGE 'plpgsql';
-
-
--- Find the availability of a route at every stop on a specific day and time
--- Will only return trips which stop either at the depart or destination stations
-CREATE OR REPLACE FUNCTION find_route_availability(target_route INT, target_day INT, target_time TIME)
-RETURNS TABLE (
-	departure_station					INT,
-	destination_station					INT,
-	stops_at_depart_station 			BOOLEAN,
-	stops_at_dest_station 				BOOLEAN,
-	ordinal 							INT,
-	seats_left							INT
-)
-AS $$
-BEGIN
-	RETURN QUERY SELECT DISTINCT t.depart_station, rs.station_id, stops_here(target_route, t.depart_station), 
-				rs.stops_here, rs.ordinal, t.seats_left
-				 FROM TRIP as t, ROUTE_STATIONS as rs, SCHEDULE as s
-				 WHERE s.sched_day = target_day
-				 AND s.sched_time = target_time
-				 AND s.t_route = target_route
-				 AND t.sched_id = s.sched_id
-				 AND (stops_here(target_route, t.depart_station) IS TRUE OR rs.stops_here IS TRUE)
-				 AND rs.route_id = target_route
-				 AND t.rs_id = rs.rs_id;
-END;
-$$
-LANGUAGE 'plpgsql';
-
-

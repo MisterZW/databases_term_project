@@ -2,7 +2,6 @@
 \i mock_data.sql
 \i dml.sql
 
-
 \echo 'TEST CASE: trains_which_dont_go_here(1)'
 \echo 'EXPECTED BEHAVIOR: RESULT DOES NOT CONTAIN 1'
 SELECT * FROM trains_which_dont_go_here(1) WHERE train_id < 10;
@@ -26,7 +25,7 @@ SELECT * FROM single_trip_route_search(10, 1, 1);
 
 
 \echo 'TEST CASE: trains_through_this_station(stations 1 and 10)'
-\echo 'EXPECTED BEHAVIOR: ONE OF THESE QUERIES SHOULD FIND TRAIN 1'
+\echo 'EXPECTED BEHAVIOR: AT LEAST ONE OF THESE QUERIES SHOULD FIND TRAIN 1'
 \echo 'WILL LIKELY RETURN OTHER RESULTS (maybe 11, 20, etc)'
 SELECT * FROM trains_through_this_station('08:00:00', 1, 1);
 SELECT * FROM trains_through_this_station('09:00:00', 1, 1);
@@ -74,6 +73,16 @@ SELECT * FROM get_route_schedule(1);
 
 \echo 'TEST CASE: find_route_availability(route 1, day 1, time 8 9 or 10)'
 \echo 'EXPECTED BEHAVIOR: shows availibility for route 1 in one of the 3 queries (other 2 blank)'
+SELECT * FROM find_route_availability(1, 1, '08:00:00');
+SELECT * FROM find_route_availability(1, 1, '09:00:00');
+SELECT * FROM find_route_availability(1, 1, '10:00:00');
+
+
+\echo 'TEST CASE: make_reservation(5 tickets on schedule id #1)'
+\echo 'EXPECTED BEHAVIOR: no errors for make_reservation itself (returns nothing)'
+\echo 'Second set of calls to find_route_availability() should number of seats'
+\echo 'is lower by 5 for EACH LEG of the scheduled route'
+SELECT make_reservation('agent3', 4, 1, 5, 1, 10);
 SELECT * FROM find_route_availability(1, 1, '08:00:00');
 SELECT * FROM find_route_availability(1, 1, '09:00:00');
 SELECT * FROM find_route_availability(1, 1, '10:00:00');

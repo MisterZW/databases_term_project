@@ -132,13 +132,13 @@ DROP TABLE IF EXISTS TRIP CASCADE;
 CREATE TABLE TRIP (
 	
 	sched_id		INT,
-	seats_left		INT,
+	seats_left		INT NOT NULL,
 	rs_id			INT,
-	trip_distance 	NUMERIC(6, 2),
-	trip_cost		NUMERIC(6, 2),
-	trip_time		INTERVAL,
-	arrival_time	TIME,
-	depart_station	INT,
+	trip_distance 	NUMERIC(6, 2) NOT NULL,
+	trip_cost		NUMERIC(6, 2) NOT NULL,
+	trip_time		INTERVAL NOT NULL,
+	arrival_time	TIME NOT NULL,
+	depart_station	INT NOT NULL,
 	rail_id			INT,
 	trip_id			SERIAL,	
 
@@ -269,21 +269,12 @@ BEGIN
 					' is closed at ' || arr_time;
 			END IF;
 
-			IF NEW.is_forward IS TRUE
+
+			IF next_rs.station_id = conn_rec.station_1
 			THEN
-				IF next_rs.station_id = conn_rec.station_1
-				THEN
-					depart_station = conn_rec.station_2;
-				ELSE
-					depart_station = conn_rec.station_1;
-				END IF;
+				depart_station = conn_rec.station_2;
 			ELSE
-				IF next_rs.station_id = conn_rec.station_1
-				THEN
-					depart_station = conn_rec.station_1;
-				ELSE
-					depart_station = conn_rec.station_2;
-				END IF;
+				depart_station = conn_rec.station_1;
 			END IF;
 
 			INSERT INTO TRIP (sched_id, seats_left, rs_id, trip_distance,
