@@ -1,3 +1,9 @@
+# Builds one .sql file called mock_data.sql from all component .dat files
+
+# Generates all the necessary insert statements and commits each .dat file's data
+# one transaction at a time with all constraints deferred (needed for trips to play
+# nice with schedules)
+
 filenames = ['trains.dat', 'stations.dat', 'agents.dat', 'passenger.dat', 'rail_lines.dat',
 	'routes.dat', 'connections.dat', 'route_stations.dat', 'schedules.dat', 'bookings.dat']
 

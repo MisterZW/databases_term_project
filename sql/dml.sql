@@ -199,15 +199,6 @@ LANGUAGE 'plpgsql';
 -- Find all routes that stop at a specified arrival station and then at the specified
 -- destination station on a specified day of the week
 -- excludes trip results which have no available seats
-
--- TO PRODUCE PAGINATED RESULTS:
-
--- SELECT * FROM single_trip_route_search([parameters])
--- FETCH FIRST 10 ROWS ONLY; 
-
--- SELECT * FROM single_trip_route_search([parameters])
--- OFFSET [num_rows_already_retured]
--- FETCH NEXT 10 ROWS;
 CREATE OR REPLACE FUNCTION single_trip_route_search(arr_st INT, dest_st INT, target_day INT) 
 RETURNS TABLE (
 	route_id 				INT,
@@ -250,15 +241,28 @@ END;
 $$
 LANGUAGE 'plpgsql';
 
-
--- Wrapper for single trip route search to order results by specified criteria
--- order_by_option values:
--- 1: stops
--- 2: stations passed
--- 3: total price
--- 4: total time
--- 5: total distance
--- default: distance
+/****************************************************************************
+* Wrapper for single trip route search to order results by specified criteria
+* order_by_option values:
+*
+* 1: stops
+* 2: stations passed
+* 3: total price
+* 4: total time
+* 5: total distance
+* default: distance
+*
+*
+* TO PRODUCE PAGINATED RESULTS:
+*
+* SELECT * FROM sort_STRS([parameters])
+* FETCH FIRST 10 ROWS ONLY; 
+*
+* SELECT * FROM sort_STRS([parameters])
+* OFFSET [num_rows_already_retured]
+* FETCH NEXT 10 ROWS;
+*
+****************************************************************************/
 CREATE OR REPLACE FUNCTION sort_STRS(order_by_option INT, order_asc BOOLEAN,
 	arr_st INT, dest_st INT, target_day INT)
 RETURNS TABLE (

@@ -128,6 +128,7 @@ DECLARE
 BEGIN
 	SELECT DISTINCT * FROM TRIP as t WHERE t.trip_id = NEW.trip INTO trip_rec;
 
+--CONSTRAINT PREVENTS OVERBOOKING TRAINS--
 	IF NEW.num_tickets > trip_rec.seats_left
 	THEN
 		RAISE integrity_constraint_violation 

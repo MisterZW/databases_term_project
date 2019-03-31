@@ -157,8 +157,6 @@ with open('route_stations.dat', 'w+') as rs_file:
 			conn_id = 'null'
 		else:
 			conn_id = connection_map[ (prev_station, station_id) ]
-		
-		# entry = (ordinal, stops_here, station_id, route_id, conn_id )
 
 		rs_file.write( '(' + str(ordinal) + ', ' + str(stops_here) + ', ' + str(station_id) + 
 			', ' + str(route_id) + ', ' +  str(conn_id) + ')\n' )
@@ -184,12 +182,9 @@ with open('route_stations.dat', 'w+') as rs_file:
 		else:
 			conn_id = connection_map[ (prev_station, station_id) ]
 
-		# entry = (ordinal, stops_here, station_id, route_id, conn_id)
-
 		rs_file.write( '(' + str(ordinal) + ', ' + str(stops_here) + ', ' + str(station_id) + 
 			', ' + str(route_id) + ', ' +  str(conn_id) + ')\n' )
 
-		# rs_file.write( str(entry) + '\n' )
 
 sched_id = 0
 
@@ -211,32 +206,6 @@ with open('schedules.dat', 'w+') as sched_file:
 			sched = (day, str(sched_time), train_route, train_id, is_forward)
 			sched_file.write( str(sched) + '\n' )
 			sched_id += 1
-
-	""" 
-	CAN BE TOGGLED BACK ON TO VERIFY FUNCTIONALITY OF stations_all_trains_visit()
-
-	for x in range(1, NUM_TRAINS+1):
-		sched2 = (1, str(time(hour = randint(10, 16))), 1, x, is_forward)
-		sched_file.write( str(sched2) + '\n' )
-	"""
-
-"""
-
-# build trips
-with open('trips.dat', 'w+') as trip_file:
-	trip_file.write('TRIP\n')
-
-	day = timedelta(days=1)
-	tomorrow = date.today() + day
-
-	for i in range(1, sched_id):
-		trip_date = tomorrow
-		for rail in range(1, NUM_RAIL_LINES + 1):
-			train_id = rail
-			trip = (i, str(trip_date))
-			trip_file.write(str(trip) +'\n')
-
-"""
 
 # build bookings
 with open('bookings.dat', 'w+') as book_file:
