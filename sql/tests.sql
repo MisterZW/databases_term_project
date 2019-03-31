@@ -277,3 +277,13 @@ SELECT * FROM sort_STRS(5, false, 1, 10, 1);
 SELECT * FROM sort_STRS(5, true, 10, 1, 1);
 SELECT * FROM sort_STRS(5, false, 10, 1, 1);
 \echo '\n'
+
+
+
+\echo 'TEST CASE: test that single_trip_route_search excludes full trips from its results'
+\echo 'EXPECTED BEHAVIOR: after booking test route to full, searches only find route 1'
+\echo 'should have one query with a blank result also (only one direction should work here)'
+INSERT INTO BOOKING VALUES('agent5', 50, (SELECT MAX(trip_id) FROM TRIP), 200);
+SELECT * FROM sort_STRS(1, true, 1, 10, 1);
+SELECT * FROM sort_STRS(1, true, 10, 1, 1);
+\echo '\n'
