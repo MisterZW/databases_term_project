@@ -6,22 +6,23 @@
 \i dml.sql
 
 
-\echo 'TEST CASE: trains_which_dont_go_here(1)'
-\echo 'EXPECTED BEHAVIOR: returns train 3 and train 5'
-SELECT * FROM trains_which_dont_go_here(1);
+\echo 'TEST CASE: trains_which_dont_go_here(2)'
+\echo 'EXPECTED BEHAVIOR: returns train 2, 4, and 5'
+\echo 'Train 4 should be included because its route passes through but does not STOP here'
+SELECT * FROM trains_which_dont_go_here(2);
 
 
 \echo 'TEST CASE: stations_all_trains_pass_through()'
-\echo 'EXPECTED BEHAVIOR: NO RESULTING ROWS'
+\echo 'EXPECTED BEHAVIOR: returns station 1 and 4'
 SELECT * FROM stations_all_trains_pass_through();
 
 
 \echo 'TEST CASE: greater_than_percent_stops(75)'
-\echo 'EXPECTED BEHAVIOR: routes 1-4 are returned (5 is omitted)'
+\echo 'EXPECTED BEHAVIOR: routes 1-4 are returned (5 & 6 omitted)'
 SELECT * FROM greater_than_percent_stops(80);
 
 
-\echo 'TEST CASE: trains_through_this_station(station A)'
+\echo 'TEST CASE: trains_through_this_station(station A @ 9AM Monday)'
 \echo 'EXPECTED BEHAVIOR: finds trains 1 and 2'
 SELECT * FROM trains_through_this_station('09:00:00', 1, 1);
 
@@ -37,7 +38,7 @@ SELECT * FROM same_stations_diff_stops();
 
 
 \echo 'TEST CASE: get_route_schedule(1)'
-\echo 'EXPECTED BEHAVIOR: shows schedule for route 1'
+\echo 'EXPECTED BEHAVIOR: shows schedules for route 1'
 SELECT * FROM get_route_schedule(1);
 
 
@@ -53,6 +54,10 @@ SELECT * FROM find_route_availability(1, 1, '09:00:00');
 SELECT * FROM make_reservation('agent0', 1, 1, 50, 1, 2);
 SELECT * FROM find_route_availability(1, 1, '09:00:00');
 
+
+\echo 'TEST CASE: find_route_availability() for a schedule running route 1 BACKWARD'
+\echo 'EXPECTED BEHAVIOR: shows availibility for route 1 appropriately for reversed route'
+SELECT * FROM find_route_availability(1, 3, '12:00:00');
 
 \echo 'TEST CASE: create_customer_account() AND view_customer_account()'
 \echo 'EXPECTED BEHAVIOR: QUERY RETURNS CUSTOMER DATA WITH INTEGER customer_ID 11 and first_name "first"'

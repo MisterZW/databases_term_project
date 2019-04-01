@@ -122,4 +122,11 @@ INSERT INTO SCHEDULE (sched_day, sched_time, t_route, train_id, is_forward)
 INSERT INTO SCHEDULE (sched_day, sched_time, t_route, train_id, is_forward)
 	VALUES(2, '9:00:00', 6, 1, True);
 
+-- DAY 3
+INSERT INTO SCHEDULE (sched_day, sched_time, t_route, train_id, is_forward)
+	VALUES(3, '12:00:00', 3, 5, False);
+
+INSERT INTO SCHEDULE (sched_day, sched_time, t_route, train_id, is_forward)
+	VALUES(3, '12:00:00', 1, 3, False);
+
 --COMMIT;

@@ -181,21 +181,29 @@ RETURNS TABLE (
     destination_station                 INT,
     stops_at_depart_station             BOOLEAN,
     stops_at_dest_station               BOOLEAN,
-    ordinal                             INT,
+    trip_id                             INT,
     seats_left                          INT
 )
 AS $$
 BEGIN
-    RETURN QUERY SELECT DISTINCT t.depart_station, rs.station_id, stops_here(target_route, t.depart_station), 
-                rs.stops_here, rs.ordinal, t.seats_left
+
+    RETURN QUERY SELECT DISTINCT 
+                CASE WHEN s.is_forward IS TRUE THEN t.depart_station ELSE rs.station_id END,
+                CASE WHEN s.is_forward IS TRUE THEN rs.station_id ELSE t.depart_station END,
+                CASE WHEN s.is_forward IS TRUE THEN stops_here(target_route, t.depart_station)
+                    ELSE rs.stops_here END,
+                CASE WHEN s.is_forward IS TRUE THEN rs.stops_here
+                    ELSE stops_here(target_route, t.depart_station) END,
+                t.trip_id, t.seats_left
+                
                  FROM TRIP as t, ROUTE_STATIONS as rs, SCHEDULE as s
                  WHERE s.sched_day = target_day
                  AND s.sched_time = target_time
                  AND s.t_route = target_route
                  AND t.sched_id = s.sched_id
-                 AND (stops_here(target_route, t.depart_station) IS TRUE OR rs.stops_here IS TRUE)
                  AND rs.route_id = target_route
-                 AND t.rs_id = rs.rs_id;
+                 AND t.rs_id = rs.rs_id
+                 ORDER BY t.trip_id ASC;
 END;
 $$
 LANGUAGE 'plpgsql';
