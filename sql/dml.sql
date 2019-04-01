@@ -620,3 +620,79 @@ BEGIN
 END;
 $$
 LANGUAGE 'plpgsql';
+
+
+
+/* Drops all data from all tables, but retains the database schema */
+CREATE OR REPLACE FUNCTION drop_database()
+RETURNS VOID
+AS $$
+BEGIN
+    DELETE FROM BOOKING CASCADE;
+    DELETE FROM TRIP CASCADE;
+    DELETE FROM SCHEDULE CASCADE;
+    DELETE FROM ROUTE_STATIONS CASCADE;
+    DELETE FROM CONNECTION CASCADE;
+    DELETE FROM TRAIN_ROUTE CASCADE;
+    DELETE FROM STATION CASCADE;
+    DELETE FROM TRAIN CASCADE;
+    DELETE FROM PASSENGER CASCADE;
+    DELETE FROM RAIL_LINE CASCADE;
+    DELETE FROM AGENT CASCADE;
+END;
+$$
+LANGUAGE 'plpgsql';
+
+
+
+-- exports all data in the database to /tmp with a specified filename prefix
+CREATE OR REPLACE FUNCTION export_database(filename VARCHAR)
+RETURNS VOID
+AS $$
+BEGIN
+    EXECUTE format('COPY AGENT TO %L WITH CSV', '/tmp/' || $1 || 'agent.csv');
+    EXECUTE format('COPY RAIL_LINE TO %L WITH CSV', '/tmp/' || $1 || 'rail_line.csv');
+    EXECUTE format('COPY TRAIN TO %L WITH CSV', '/tmp/' || $1 || 'train.csv');
+    EXECUTE format('COPY STATION TO %L WITH CSV', '/tmp/' || $1 || 'station.csv');
+    EXECUTE format('COPY TRAIN_ROUTE TO %L WITH CSV', '/tmp/' || $1 || 'train_route.csv');
+    EXECUTE format('COPY CONNECTION TO %L WITH CSV', '/tmp/' || $1 || 'connection.csv');
+    EXECUTE format('COPY PASSENGER TO %L WITH CSV', '/tmp/' || $1 || 'passenger.csv');
+    EXECUTE format('COPY ROUTE_STATIONS TO %L WITH CSV', '/tmp/' || $1 || 'route_stations.csv');
+    EXECUTE format('COPY SCHEDULE TO %L WITH CSV', '/tmp/' || $1 || 'schedule.csv');
+    EXECUTE format('COPY TRIP TO %L WITH CSV', '/tmp/' || $1 || 'trip.csv');
+    EXECUTE format('COPY BOOKING TO %L WITH CSV', '/tmp/' || $1 || 'booking.csv');
+END;
+$$
+LANGUAGE 'plpgsql';
+
+
+
+-- imports all data in the database from /tmp with a specified filename prefix
+CREATE OR REPLACE FUNCTION import_database(filename VARCHAR)
+RETURNS VOID
+AS $$
+BEGIN
+    ALTER TABLE SCHEDULE DISABLE TRIGGER sched_needs_trips;
+    ALTER TABLE BOOKING DISABLE TRIGGER trig_sell_tickets;
+
+
+    EXECUTE format('COPY AGENT FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'agent.csv');
+    EXECUTE format('COPY RAIL_LINE FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'rail_line.csv');
+    EXECUTE format('COPY TRAIN FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'train.csv');
+    EXECUTE format('COPY STATION FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'station.csv');
+    EXECUTE format('COPY TRAIN_ROUTE FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'train_route.csv');
+    EXECUTE format('COPY CONNECTION FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'connection.csv');
+    EXECUTE format('COPY PASSENGER FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'passenger.csv');
+    EXECUTE format('COPY ROUTE_STATIONS FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'route_stations.csv');
+    EXECUTE format('COPY SCHEDULE FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'schedule.csv');
+    EXECUTE format('COPY TRIP FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'trip.csv');
+    EXECUTE format('COPY BOOKING FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'booking.csv');
+
+    ALTER TABLE BOOKING ENABLE TRIGGER trig_sell_tickets;
+    ALTER TABLE SCHEDULE ENABLE TRIGGER sched_needs_trips;
+END;
+$$
+LANGUAGE 'plpgsql';
+
+
+
