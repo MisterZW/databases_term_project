@@ -196,7 +196,7 @@ SELECT * FROM sort_CTRS(1, true, 4, 1, 1);
 
 
 \echo 'TEST CASE: test FORWARD (A --> D) CTRS sorting by number of stops ascending, then descending'
-\echo 'EXPECTED BEHAVIOR: '
+\echo 'EXPECTED BEHAVIOR: finds all combination routes from station 1 to station 4'
 \echo 'first result lists route with fewest stops first, second lists it last'
 SELECT * FROM sort_CTRS(1, true, 1, 4, 1);
 SELECT * FROM sort_CTRS(1, false, 1, 4, 1);
@@ -235,3 +235,21 @@ SELECT * FROM sort_CTRS(5, false, 1, 4, 1);
 
 
 -- INCLUDE TESTS TO VERIFY ROUTE SEARCH DOESN'T INCLUDE BOOKED ROUTES
+
+\echo 'OVERBOOKING SCHEDULE ID 2 ON TRIP ID 3 to see if STRS and CTRS exclude this option'
+INSERT INTO BOOKING (agent, passenger, trip, num_tickets)
+	VALUES ('agent0', 2, 3, 100);
+\echo '\n'
+
+
+\echo 'TEST CASE: test STRS FORWARD (A --> D) '
+\echo 'EXPECTED BEHAVIOR: same results as A --> D forward CTRS BUT excluding all options including sched id 2'
+SELECT * FROM sort_STRS(1, true, 1, 4, 1);
+
+
+\echo '\n'
+
+
+\echo 'TEST CASE: test CTRS FORWARD (A --> D) '
+\echo 'EXPECTED BEHAVIOR: same results as A --> D forward CTRS BUT excluding all options including trip id 3'
+SELECT * FROM sort_CTRS(1, true, 1, 4, 1);
