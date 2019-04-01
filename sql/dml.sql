@@ -276,11 +276,17 @@ BEGIN
     RETURN QUERY
         WITH RECURSIVE combo(id, source, dest, depth, day, t_time, full_path, num_stops,
                 total_price, total_distance, total_time) AS (
-            SELECT t.trip_id, t.depart_station, rs.station_id, 1, s.sched_day, t.arrival_time, 
+            SELECT t.trip_id, 
+            CASE WHEN s.is_forward IS TRUE THEN t.depart_station ELSE rs.station_id END, 
+            CASE WHEN s.is_forward IS TRUE THEN rs.station_id ELSE t.depart_station END, 
+            1, s.sched_day, t.arrival_time, 
             ARRAY [ t.trip_id ] as full_path, 1 + (CASE WHEN rs.stops_here IS TRUE THEN 1 ELSE 0 END), 
                 t.trip_cost, t.trip_distance, t.trip_time
             FROM TRIP as t, SCHEDULE as s, ROUTE_STATIONS as rs
-            WHERE t.depart_station = first_station
+            WHERE 
+                CASE WHEN s.is_forward IS TRUE
+                    THEN t.depart_station = first_station
+                    ELSE rs.station_id = first_station END
                 AND t.sched_id = s.sched_id
                 AND s.sched_day = target_day
                 AND rs.rs_id = t.rs_id
@@ -288,13 +294,17 @@ BEGIN
 
         UNION
             
-            SELECT tr.trip_id, c.source, rs2.station_id, c.depth + 1, s2.sched_day, tr.arrival_time,
+            SELECT tr.trip_id, c.source, CASE WHEN s2.is_forward IS TRUE THEN rs2.station_id ELSE tr.depart_station END, 
+                c.depth + 1, s2.sched_day, tr.arrival_time,
                 array_append(c.full_path, tr.trip_id), c.num_stops + (CASE WHEN rs2.stops_here IS TRUE THEN 1 ELSE 0 END),
                 CAST( (c.total_price + tr.trip_cost) AS NUMERIC(6,2) ), 
                 CAST( (c.total_distance + tr.trip_distance) AS NUMERIC(6,2) ), 
                 (c.total_time + tr.trip_time)
             FROM TRIP as tr, SCHEDULE as s2, ROUTE_STATIONS as rs2, combo as c
-            WHERE tr.depart_station = c.dest
+            WHERE 
+                CASE WHEN s2.is_forward IS TRUE 
+                    THEN tr.depart_station = c.dest
+                    ELSE rs2.station_id = c.dest END
                 AND s2.sched_day = c.day
                 AND tr.sched_id = s2.sched_id
                 AND rs2.rs_id = tr.rs_id
