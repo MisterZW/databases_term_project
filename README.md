@@ -1,8 +1,9 @@
 # Express Railway Database
 
-##Data
+###Data
 
-##ER
+###ER
 
-##SQL
+###SQL
+
 phase 1 (tentatively) complete!
