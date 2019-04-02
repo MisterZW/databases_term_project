@@ -1,8 +1,5 @@
 # Express Railway Database
 
-'''
-1=1
-'''
 
 ## Project Folders
 
