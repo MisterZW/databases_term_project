@@ -1,6 +1,6 @@
-/* 
+/*
 * This file contains most of the interface/functionality for ExpressRailway
-* 
+*
  */
 
 -- Insert a new customer in to the system
@@ -53,13 +53,13 @@ DECLARE
     arr_stat_ord INT;
     dest_stat_ord INT;
     trip_cursor REFCURSOR;
-    trip_rec RECORD; 
+    trip_rec RECORD;
 BEGIN
     SELECT * from SCHEDULE as s where s.sched_id = target_schedule INTO sched_rec;
     arr_stat_ord = get_station_ordinal(sched_rec.t_route, arr_station);
     dest_stat_ord = get_station_ordinal(sched_rec.t_route, dest_station);
 
-    open trip_cursor FOR SELECT DISTINCT * 
+    open trip_cursor FOR SELECT DISTINCT *
         FROM TRIP as t
         WHERE t.sched_id = sched_rec.sched_id
         AND CASE WHEN arr_stat_ord < dest_stat_ord
@@ -86,7 +86,7 @@ LANGUAGE 'plpgsql';
 
 
 
--- Find all trains that do not stop at a specified station at any 
+-- Find all trains that do not stop at a specified station at any
 -- time during an entire week.
 -- @param target_station    the station_id of the station of interest
 CREATE OR REPLACE FUNCTION trains_which_dont_go_here(target_station INT)
@@ -126,7 +126,7 @@ $$
 LANGUAGE 'plpgsql';
 
 
--- Find routes that stop at least at XX% of the Stations they visit:    
+-- Find routes that stop at least at XX% of the Stations they visit:
 -- @param target_percent:   percentage between 10 and 90
 CREATE OR REPLACE FUNCTION greater_than_percent_stops(target_percent INT)
 RETURNS TABLE (
@@ -138,7 +138,7 @@ BEGIN
     RETURN QUERY SELECT DISTINCT outside.route_id
     FROM ROUTE_STATIONS outside
     WHERE target_percent <= ((SELECT COUNT(station_id) from ROUTE_STATIONS inside
-                                WHERE stops_here IS TRUE AND inside.route_id = outside.route_id) * 100 / 
+                                WHERE stops_here IS TRUE AND inside.route_id = outside.route_id) * 100 /
                                 (SELECT COUNT(station_id) from ROUTE_STATIONS inside2
                                 WHERE inside2.route_id = outside.route_id));
 
@@ -153,7 +153,7 @@ RETURNS INT
 AS $$
 BEGIN
 
-    RETURN rs.ordinal FROM ROUTE_STATIONS as rs 
+    RETURN rs.ordinal FROM ROUTE_STATIONS as rs
     WHERE rs.station_id = target_station
     AND rs.route_id = target_route;
 
@@ -187,7 +187,7 @@ RETURNS TABLE (
 AS $$
 BEGIN
 
-    RETURN QUERY SELECT DISTINCT 
+    RETURN QUERY SELECT DISTINCT
                 CASE WHEN s.is_forward IS TRUE THEN t.depart_station ELSE rs.station_id END,
                 CASE WHEN s.is_forward IS TRUE THEN rs.station_id ELSE t.depart_station END,
                 CASE WHEN s.is_forward IS TRUE THEN stops_here(target_route, t.depart_station)
@@ -195,7 +195,7 @@ BEGIN
                 CASE WHEN s.is_forward IS TRUE THEN rs.stops_here
                     ELSE stops_here(target_route, t.depart_station) END,
                 t.trip_id, t.seats_left
-                
+
                  FROM TRIP as t, ROUTE_STATIONS as rs, SCHEDULE as s
                  WHERE s.sched_day = target_day
                  AND s.sched_time = target_time
@@ -209,13 +209,13 @@ $$
 LANGUAGE 'plpgsql';
 
 
-/******************************************************************************************* 
+/*******************************************************************************************
 * Find all routes that stop at a specified arrival station and then at the specified
 * destination station on a specified day of the week
 *
 * excludes trip results which have no available seats
 *******************************************************************************************/
-CREATE OR REPLACE FUNCTION single_trip_route_search(arr_st INT, dest_st INT, target_day INT) 
+CREATE OR REPLACE FUNCTION single_trip_route_search(arr_st INT, dest_st INT, target_day INT)
 RETURNS TABLE (
     route_id                INT,
     sched_id                INT,
@@ -227,7 +227,7 @@ RETURNS TABLE (
 )
 AS $$
 BEGIN
-    RETURN QUERY SELECT DISTINCT 
+    RETURN QUERY SELECT DISTINCT
                     s.t_route AS route_id,
                     s.sched_id AS sched_id,
                     COUNT(DISTINCT t.trip_id) + 1 AS num_stations_passed,
@@ -237,7 +237,7 @@ BEGIN
                     SUM(t.trip_time) AS total_time
 
                  FROM SCHEDULE AS s, TRIP as t
-                 WHERE s.sched_day = target_day 
+                 WHERE s.sched_day = target_day
                  AND t.sched_id = s.sched_id
                  AND s.t_route IN (SELECT r1.route_id
                             FROM ROUTE_STATIONS AS r1, ROUTE_STATIONS AS r2
@@ -266,7 +266,7 @@ LANGUAGE 'plpgsql';
 *
 * Returns a table of integer arrays representing possible combinations of trip IDs
 * which link source to sink in the graph (taking into account day and seats available)
-* 
+*
 * Also returns desciptive statistics about the route which can be used to sort results
 ******************************************************************************************/
 
@@ -284,14 +284,14 @@ BEGIN
     RETURN QUERY
         WITH RECURSIVE combo(id, source, dest, depth, day, t_time, full_path, num_stops,
                 total_price, total_distance, total_time) AS (
-            SELECT t.trip_id, 
-            CASE WHEN s.is_forward IS TRUE THEN t.depart_station ELSE rs.station_id END, 
-            CASE WHEN s.is_forward IS TRUE THEN rs.station_id ELSE t.depart_station END, 
-            1, s.sched_day, t.arrival_time, 
-            ARRAY [ t.trip_id ] as full_path, 1 + (CASE WHEN rs.stops_here IS TRUE THEN 1 ELSE 0 END), 
+            SELECT t.trip_id,
+            CASE WHEN s.is_forward IS TRUE THEN t.depart_station ELSE rs.station_id END,
+            CASE WHEN s.is_forward IS TRUE THEN rs.station_id ELSE t.depart_station END,
+            1, s.sched_day, t.arrival_time,
+            ARRAY [ t.trip_id ] as full_path, 1 + (CASE WHEN rs.stops_here IS TRUE THEN 1 ELSE 0 END),
                 t.trip_cost, t.trip_distance, t.trip_time
             FROM TRIP as t, SCHEDULE as s, ROUTE_STATIONS as rs
-            WHERE 
+            WHERE
                 CASE WHEN s.is_forward IS TRUE
                     THEN t.depart_station = first_station
                     ELSE rs.station_id = first_station END
@@ -301,16 +301,16 @@ BEGIN
                 AND t.seats_left > 0
 
         UNION
-            
-            SELECT tr.trip_id, c.source, CASE WHEN s2.is_forward IS TRUE THEN rs2.station_id ELSE tr.depart_station END, 
+
+            SELECT tr.trip_id, c.source, CASE WHEN s2.is_forward IS TRUE THEN rs2.station_id ELSE tr.depart_station END,
                 c.depth + 1, s2.sched_day, tr.arrival_time,
                 array_append(c.full_path, tr.trip_id), c.num_stops + (CASE WHEN rs2.stops_here IS TRUE THEN 1 ELSE 0 END),
-                CAST( (c.total_price + tr.trip_cost) AS NUMERIC(6,2) ), 
-                CAST( (c.total_distance + tr.trip_distance) AS NUMERIC(6,2) ), 
+                CAST( (c.total_price + tr.trip_cost) AS NUMERIC(6,2) ),
+                CAST( (c.total_distance + tr.trip_distance) AS NUMERIC(6,2) ),
                 (c.total_time + tr.trip_time)
             FROM TRIP as tr, SCHEDULE as s2, ROUTE_STATIONS as rs2, combo as c
-            WHERE 
-                CASE WHEN s2.is_forward IS TRUE 
+            WHERE
+                CASE WHEN s2.is_forward IS TRUE
                     THEN tr.depart_station = c.dest
                     ELSE rs2.station_id = c.dest END
                 AND s2.sched_day = c.day
@@ -346,7 +346,7 @@ RETURN QUERY (SELECT s.train_id
              AND t.sched_id = s.sched_id
              AND s.sched_day = target_day
              AND t.arrival_time = target_time)
-            UNION 
+            UNION
             (SELECT s.train_id FROM SCHEDULE as s, TRIP as t
             WHERE s.sched_day = target_day
             AND s.sched_time = target_time
@@ -392,7 +392,7 @@ BEGIN
 
 RETURN QUERY (SELECT DISTINCT tr1.route_id, tr2.route_id
                  FROM TRAIN_ROUTE as tr1, TRAIN_ROUTE as tr2
-        
+
                  WHERE tr1.route_id < tr2.route_id
 
                  AND tr1.route_id IN (SELECT DISTINCT rs.route_id FROM ROUTE_STATIONS as rs)
@@ -438,13 +438,13 @@ DECLARE
     dest_stat_ord INT;
 BEGIN
     IF arr_station = dest_station
-    THEN 
+    THEN
         RETURN 0;
     ELSE
         arr_stat_ord = get_station_ordinal(target_route, arr_station);
         dest_stat_ord = get_station_ordinal(target_route, dest_station);
 
-        RETURN COUNT(DISTINCT rs.station_id) 
+        RETURN COUNT(DISTINCT rs.station_id)
             FROM ROUTE_STATIONS as rs
             WHERE rs.route_id = target_route
             AND rs.stops_here IS TRUE
@@ -495,7 +495,7 @@ LANGUAGE 'plpgsql';
 * TO PRODUCE PAGINATED RESULTS:
 *
 * SELECT * FROM sort_STRS([parameters])
-* FETCH FIRST 10 ROWS ONLY; 
+* FETCH FIRST 10 ROWS ONLY;
 *
 * SELECT * FROM sort_STRS([parameters])
 * OFFSET [num_rows_already_retured]
@@ -516,10 +516,10 @@ RETURNS TABLE (
 AS $$
 BEGIN
     IF order_asc
-    THEN 
-        RETURN QUERY SELECT * FROM 
+    THEN
+        RETURN QUERY SELECT * FROM
         single_trip_route_search(arr_st, dest_st, target_day) as res
-             ORDER BY CASE 
+             ORDER BY CASE
              WHEN order_by_option = 1
                 THEN res.num_stops
              WHEN order_by_option = 2
@@ -532,9 +532,9 @@ BEGIN
                 res.total_distance
              END ASC;
     ELSE
-        RETURN QUERY SELECT * FROM 
+        RETURN QUERY SELECT * FROM
         single_trip_route_search(arr_st, dest_st, target_day) as res
-             ORDER BY CASE 
+             ORDER BY CASE
              WHEN order_by_option = 1
                 THEN res.num_stops
              WHEN order_by_option = 2
@@ -566,7 +566,7 @@ LANGUAGE 'plpgsql';
 * TO PRODUCE PAGINATED RESULTS:
 *
 * SELECT * FROM sort_CTRS([parameters])
-* FETCH FIRST 10 ROWS ONLY; 
+* FETCH FIRST 10 ROWS ONLY;
 *
 * SELECT * FROM sort_CTRS([parameters])
 * OFFSET [num_rows_already_retured]
@@ -586,10 +586,10 @@ RETURNS TABLE (
 AS $$
 BEGIN
     IF order_asc
-    THEN 
-        RETURN QUERY SELECT * FROM 
+    THEN
+        RETURN QUERY SELECT * FROM
         combo_search(arr_st, dest_st, target_day) as res
-             ORDER BY CASE 
+             ORDER BY CASE
              WHEN order_by_option = 1
                 THEN res.num_stops
              WHEN order_by_option = 2
@@ -602,9 +602,9 @@ BEGIN
                 res.total_distance
              END ASC;
     ELSE
-        RETURN QUERY SELECT * FROM 
+        RETURN QUERY SELECT * FROM
         combo_search(arr_st, dest_st, target_day) as res
-             ORDER BY CASE 
+             ORDER BY CASE
              WHEN order_by_option = 1
                 THEN res.num_stops
              WHEN order_by_option = 2
@@ -670,6 +670,7 @@ LANGUAGE 'plpgsql';
 -- imports all data in the database from /tmp with a specified filename prefix
 CREATE OR REPLACE FUNCTION import_database(filename VARCHAR)
 RETURNS VOID
+SECURITY DEFINER
 AS $$
 BEGIN
     ALTER TABLE SCHEDULE DISABLE TRIGGER sched_needs_trips;
@@ -693,6 +694,3 @@ BEGIN
 END;
 $$
 LANGUAGE 'plpgsql';
-
-
-
