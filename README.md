@@ -1,11 +1,13 @@
 # Express Railway Database
 
-## Data
+## Project Folders
+
+### Data
 This folder holds data used to help populate the database tables
 
-## ER
+### ER
 This folder contains the ER model used at the start of this project
 
-## SQL
+### SQL
 This folder holds the SQL files used to create the database
 
