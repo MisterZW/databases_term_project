@@ -3,5 +3,4 @@ converts those files into the single SQL data file <code>mock_data.sql</code>
 
 <code>mock_data.sql</code> (in the /sql directory) is the ONLY file necessary to populate the database with the test data 
 
-<br />
 Everything in this directory is used simply for bootstrapping purposes to create that one file
