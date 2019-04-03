@@ -215,29 +215,32 @@ LANGUAGE 'plpgsql';
 *
 * excludes trip results which have no available seats
 *******************************************************************************************/
+
 CREATE OR REPLACE FUNCTION single_trip_route_search(arr_st INT, dest_st INT, target_day INT)
 RETURNS TABLE (
     route_id                INT,
     sched_id                INT,
-    num_stations_passed     BIGINT,
+    num_stations_passed     INT,
     num_stops               INT,
-    total_price             NUMERIC(6,2),
-    total_distance          NUMERIC(6,2),
+    total_price             NUMERIC,
+    total_distance          NUMERIC,
     total_time              INTERVAL
 )
 AS $$
+DECLARE
 BEGIN
     RETURN QUERY SELECT DISTINCT
                     s.t_route AS route_id,
                     s.sched_id AS sched_id,
-                    COUNT(DISTINCT t.trip_id) + 1 AS num_stations_passed,
+                    get_num_stations_passed(s.t_route, arr_st, dest_st) AS num_stations_passed,
                     get_num_stops(s.t_route, arr_st, dest_st) AS num_stops,
-                    SUM(t.trip_cost) AS total_price,
-                    SUM(t.trip_distance) AS total_distance,
-                    SUM(t.trip_time) AS total_time
+                    get_route_price(s.t_route, arr_st, dest_st, s.sched_id) AS total_price,
+                    get_route_distance(s.t_route, arr_st, dest_st, s.sched_id) AS total_distance,
+                    get_route_time(s.t_route, arr_st, dest_st, s.sched_id) AS total_time
 
-                 FROM SCHEDULE AS s, TRIP as t
+                 FROM SCHEDULE AS s, TRIP as t, ROUTE_STATIONS as rs
                  WHERE s.sched_day = target_day
+                 AND rs.route_id = s.t_route
                  AND t.sched_id = s.sched_id
                  AND s.t_route IN (SELECT r1.route_id
                             FROM ROUTE_STATIONS AS r1, ROUTE_STATIONS AS r2
@@ -256,7 +259,6 @@ BEGIN
 END;
 $$
 LANGUAGE 'plpgsql';
-
 
 
 /******************************************************************************************
@@ -326,7 +328,6 @@ BEGIN
 END;
 $$
 LANGUAGE 'plpgsql';
-
 
 
 -- Find all trains that pass through a specific station at a specific
@@ -461,6 +462,151 @@ $$
 LANGUAGE 'plpgsql';
 
 
+-- get the number of stations passed on a given route between arr_station and dest_station, inclusive
+-- returns 0 if arr_station and dest_station are the same
+CREATE OR REPLACE FUNCTION get_num_stations_passed(target_route INT, arr_station INT, dest_station INT)
+RETURNS INT
+AS $$
+DECLARE
+    arr_stat_ord INT;
+    dest_stat_ord INT;
+BEGIN
+    IF arr_station = dest_station
+    THEN
+        RETURN 0;
+    ELSE
+        arr_stat_ord = get_station_ordinal(target_route, arr_station);
+        dest_stat_ord = get_station_ordinal(target_route, dest_station);
+
+        RETURN COUNT(DISTINCT rs.station_id)
+            FROM ROUTE_STATIONS as rs
+            WHERE rs.route_id = target_route
+            AND CASE WHEN arr_stat_ord < dest_stat_ord
+                THEN    rs.ordinal BETWEEN arr_stat_ord AND dest_stat_ord
+                ELSE    rs.ordinal BETWEEN dest_stat_ord AND arr_stat_ord
+                END;
+    END IF;
+
+END;
+$$
+LANGUAGE 'plpgsql';
+
+
+-- get the total distance of a route between arr_station and dest_station
+CREATE OR REPLACE FUNCTION get_route_distance(target_route INT, arr_station INT, dest_station INT,
+    target_schedule INT)
+RETURNS NUMERIC (6,2)
+AS $$
+DECLARE
+    arr_stat_ord INT;
+    dest_stat_ord INT;
+BEGIN
+    IF arr_station = dest_station
+    THEN
+        RETURN 0;
+    ELSE
+        arr_stat_ord = get_station_ordinal(target_route, arr_station);
+        dest_stat_ord = get_station_ordinal(target_route, dest_station);
+
+        RETURN SUM(t.trip_distance)
+            FROM ROUTE_STATIONS as rs, TRIP as t
+            WHERE rs.route_id = target_route
+            AND t.sched_id = target_schedule
+            AND t.rs_id = rs.rs_id
+            AND CASE WHEN arr_stat_ord < dest_stat_ord
+                THEN    rs.ordinal BETWEEN arr_stat_ord AND dest_stat_ord
+                ELSE    rs.ordinal BETWEEN dest_stat_ord AND arr_stat_ord
+                END
+            AND CASE WHEN arr_stat_ord < dest_stat_ord
+                THEN    get_station_ordinal(rs.route_id, t.depart_station)
+                    BETWEEN arr_stat_ord AND dest_stat_ord
+                ELSE    get_station_ordinal(rs.route_id, t.depart_station)
+                    BETWEEN dest_stat_ord AND arr_stat_ord
+                END;
+    END IF;
+
+END;
+$$
+LANGUAGE 'plpgsql';
+
+
+-- get the total price of a route between arr_station and dest_station
+CREATE OR REPLACE FUNCTION get_route_price(target_route INT, arr_station INT, dest_station INT,
+    target_schedule INT)
+RETURNS NUMERIC
+AS $$
+DECLARE
+    arr_stat_ord INT;
+    dest_stat_ord INT;
+BEGIN
+    IF arr_station = dest_station
+    THEN
+        RETURN 0;
+    ELSE
+        arr_stat_ord = get_station_ordinal(target_route, arr_station);
+        dest_stat_ord = get_station_ordinal(target_route, dest_station);
+
+        RETURN SUM(t.trip_cost)
+            FROM ROUTE_STATIONS as rs, TRIP as t
+            WHERE rs.route_id = target_route
+            AND t.sched_id = target_schedule
+            AND t.rs_id = rs.rs_id
+            AND CASE WHEN arr_stat_ord < dest_stat_ord
+                THEN    rs.ordinal BETWEEN arr_stat_ord AND dest_stat_ord
+                ELSE    rs.ordinal BETWEEN dest_stat_ord AND arr_stat_ord
+                END
+            AND CASE WHEN arr_stat_ord < dest_stat_ord
+                THEN    get_station_ordinal(rs.route_id, t.depart_station)
+                    BETWEEN arr_stat_ord AND dest_stat_ord
+                ELSE    get_station_ordinal(rs.route_id, t.depart_station)
+                    BETWEEN dest_stat_ord AND arr_stat_ord
+                END;
+    END IF;
+
+END;
+$$
+LANGUAGE 'plpgsql';
+
+
+
+-- get the total time of a route between arr_station and dest_station
+CREATE OR REPLACE FUNCTION get_route_time(target_route INT, arr_station INT, dest_station INT,
+    target_schedule INT)
+RETURNS INTERVAL
+AS $$
+DECLARE
+    arr_stat_ord INT;
+    dest_stat_ord INT;
+BEGIN
+    IF arr_station = dest_station
+    THEN
+        RETURN 0;
+    ELSE
+        arr_stat_ord = get_station_ordinal(target_route, arr_station);
+        dest_stat_ord = get_station_ordinal(target_route, dest_station);
+
+        RETURN SUM(t.trip_time)
+            FROM ROUTE_STATIONS as rs, TRIP as t
+            WHERE rs.route_id = target_route
+            AND t.sched_id = target_schedule
+            AND t.rs_id = rs.rs_id
+            AND CASE WHEN arr_stat_ord < dest_stat_ord
+                THEN    rs.ordinal BETWEEN arr_stat_ord AND dest_stat_ord
+                ELSE    rs.ordinal BETWEEN dest_stat_ord AND arr_stat_ord
+                END
+            AND CASE WHEN arr_stat_ord < dest_stat_ord
+                THEN    get_station_ordinal(rs.route_id, t.depart_station)
+                    BETWEEN arr_stat_ord AND dest_stat_ord
+                ELSE    get_station_ordinal(rs.route_id, t.depart_station)
+                    BETWEEN dest_stat_ord AND arr_stat_ord
+                END;
+    END IF;
+
+END;
+$$
+LANGUAGE 'plpgsql';
+
+
 
 -- Display all schedules of a route for the week
 CREATE OR REPLACE FUNCTION get_route_schedule(target_route INT)
@@ -504,15 +650,16 @@ LANGUAGE 'plpgsql';
 * FETCH NEXT 10 ROWS;
 *
 ****************************************************************************/
+
 CREATE OR REPLACE FUNCTION sort_STRS(order_by_option INT, order_asc BOOLEAN,
     arr_st INT, dest_st INT, target_day INT)
 RETURNS TABLE (
     route_id                INT,
     sched_id                INT,
-    num_stations_passed     BIGINT,
+    num_stations_passed     INT,
     num_stops               INT,
-    total_price             NUMERIC(6,2),
-    total_distance          NUMERIC(6,2),
+    total_price             NUMERIC,
+    total_distance          NUMERIC,
     total_time              INTERVAL
 )
 AS $$
@@ -529,7 +676,7 @@ BEGIN
              WHEN order_by_option = 3
                 THEN res.total_price
              WHEN order_by_option = 4
-                THEN EXTRACT(HOUR from res.total_time) + (EXTRACT(MINUTE FROM res.total_time) * 60)
+                THEN (EXTRACT(HOUR from res.total_time) * 60) + EXTRACT(MINUTE FROM res.total_time)
              ELSE
                 res.total_distance
              END ASC;
@@ -544,7 +691,7 @@ BEGIN
              WHEN order_by_option = 3
                 THEN res.total_price
              WHEN order_by_option = 4
-                THEN EXTRACT(HOUR from res.total_time) + (EXTRACT(MINUTE FROM res.total_time) * 60)
+                THEN (EXTRACT(HOUR from res.total_time) * 60) + EXTRACT(MINUTE FROM res.total_time)
              ELSE
                 res.total_distance
              END DESC;
@@ -552,8 +699,6 @@ BEGIN
 END;
 $$
 LANGUAGE 'plpgsql';
-
-
 
 /****************************************************************************
 * Wrapper for combo_search to order results by specified criteria
@@ -599,7 +744,7 @@ BEGIN
              WHEN order_by_option = 3
                 THEN res.total_price
              WHEN order_by_option = 4
-                THEN EXTRACT(HOUR from res.total_time) + (EXTRACT(MINUTE FROM res.total_time) * 60)
+                THEN (EXTRACT(HOUR from res.total_time) * 60) + EXTRACT(MINUTE FROM res.total_time)
              ELSE
                 res.total_distance
              END ASC;
@@ -614,7 +759,7 @@ BEGIN
              WHEN order_by_option = 3
                 THEN res.total_price
              WHEN order_by_option = 4
-                THEN EXTRACT(HOUR from res.total_time) + (EXTRACT(MINUTE FROM res.total_time) * 60)
+                THEN (EXTRACT(HOUR from res.total_time) * 60) + EXTRACT(MINUTE FROM res.total_time)
              ELSE
                 res.total_distance
              END DESC;
@@ -646,53 +791,13 @@ $$
 LANGUAGE 'plpgsql';
 
 
-
--- exports all data in the database to /tmp with a specified filename prefix
-CREATE OR REPLACE FUNCTION export_database(filename VARCHAR)
-RETURNS VOID
-AS $$
-BEGIN
-    EXECUTE format('COPY AGENT TO %L WITH CSV', '/tmp/' || $1 || 'agent.csv');
-    EXECUTE format('COPY RAIL_LINE TO %L WITH CSV', '/tmp/' || $1 || 'rail_line.csv');
-    EXECUTE format('COPY TRAIN TO %L WITH CSV', '/tmp/' || $1 || 'train.csv');
-    EXECUTE format('COPY STATION TO %L WITH CSV', '/tmp/' || $1 || 'station.csv');
-    EXECUTE format('COPY TRAIN_ROUTE TO %L WITH CSV', '/tmp/' || $1 || 'train_route.csv');
-    EXECUTE format('COPY CONNECTION TO %L WITH CSV', '/tmp/' || $1 || 'connection.csv');
-    EXECUTE format('COPY PASSENGER TO %L WITH CSV', '/tmp/' || $1 || 'passenger.csv');
-    EXECUTE format('COPY ROUTE_STATIONS TO %L WITH CSV', '/tmp/' || $1 || 'route_stations.csv');
-    EXECUTE format('COPY SCHEDULE TO %L WITH CSV', '/tmp/' || $1 || 'schedule.csv');
-    EXECUTE format('COPY TRIP TO %L WITH CSV', '/tmp/' || $1 || 'trip.csv');
-    EXECUTE format('COPY BOOKING TO %L WITH CSV', '/tmp/' || $1 || 'booking.csv');
-END;
-$$
-LANGUAGE 'plpgsql';
-
-
-
--- imports all data in the database from /tmp with a specified filename prefix
-CREATE OR REPLACE FUNCTION import_database(filename VARCHAR)
-RETURNS VOID
-SECURITY DEFINER
-AS $$
-BEGIN
-    ALTER TABLE SCHEDULE DISABLE TRIGGER sched_needs_trips;
-    ALTER TABLE BOOKING DISABLE TRIGGER trig_sell_tickets;
-
-
-    EXECUTE format('COPY AGENT FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'agent.csv');
-    EXECUTE format('COPY RAIL_LINE FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'rail_line.csv');
-    EXECUTE format('COPY TRAIN FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'train.csv');
-    EXECUTE format('COPY STATION FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'station.csv');
-    EXECUTE format('COPY TRAIN_ROUTE FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'train_route.csv');
-    EXECUTE format('COPY CONNECTION FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'connection.csv');
-    EXECUTE format('COPY PASSENGER FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'passenger.csv');
-    EXECUTE format('COPY ROUTE_STATIONS FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'route_stations.csv');
-    EXECUTE format('COPY SCHEDULE FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'schedule.csv');
-    EXECUTE format('COPY TRIP FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'trip.csv');
-    EXECUTE format('COPY BOOKING FROM %L WITH (FORMAT CSV)', '/tmp/' || $1 || 'booking.csv');
-
-    ALTER TABLE BOOKING ENABLE TRIGGER trig_sell_tickets;
-    ALTER TABLE SCHEDULE ENABLE TRIGGER sched_needs_trips;
-END;
-$$
-LANGUAGE 'plpgsql';
+/*
+* IMPORT AND EXPORT DATABASE COMMANDS TO BE LARGELY IMPLEMENTED IN PHASE 3
+* IT SHOULD BE POSSIBLE TO PIPE DATA THROUGH STDIN/STDOUT w/out admin access
+*
+* EXPORT COULD ALTERNATIVELY BE DONE BY SIMPLY PERFORMING SELECT * ON EACH TABLE AND
+* DEALING WITH THE FILE I/O IN THE CLIENT APPLICATION
+*
+* IMPORT BY JUST GENERATING INSERT STATEMENTS FROM SAID FILES
+* 
+*/

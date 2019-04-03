@@ -15,4 +15,5 @@ for filename in filenames:
 		table_name = file.readline().strip()
 		for line in file:
 			output.write('INSERT INTO ' + table_name + ' VALUES' + line.strip() + ';\n')
+
 		output.write('COMMIT;\n')

@@ -5,9 +5,9 @@
 \i mock_data.sql
 \i dml.sql
 
-\echo 'TEST CASE: trains_which_dont_go_here(1)'
-\echo 'EXPECTED BEHAVIOR: RESULT DOES NOT CONTAIN 1'
-SELECT * FROM trains_which_dont_go_here(1) WHERE train_id < 10;
+\echo 'TEST CASE: trains_which_dont_go_here(station 1) between id# 320 and 330'
+\echo 'EXPECTED BEHAVIOR: RESULT DOES NOT CONTAIN 321'
+SELECT * FROM trains_which_dont_go_here(1) WHERE train_id > 320 AND train_id <330;
 
 
 \echo 'TEST CASE: stations_all_trains_pass_through()'
@@ -15,14 +15,55 @@ SELECT * FROM trains_which_dont_go_here(1) WHERE train_id < 10;
 SELECT * FROM stations_all_trains_pass_through();
 
 
-\echo 'TEST CASE: greater_than_percent_stops(75)'
-\echo 'EXPECTED BEHAVIOR: A SUBSET OF ROUTES IN SYSTEM'
-SELECT * FROM greater_than_percent_stops(75);
+\echo 'TEST CASE: greater_than_percent_stops(90)'
+\echo 'EXPECTED BEHAVIOR: A SUBSET OF ROUTES WHICH STOP AT ALL THEIR STATIONS'
+SELECT * FROM greater_than_percent_stops(90) LIMIT 10;
 
 
 \echo 'TEST CASE: single_trip_route_search [day 1, stations 1-20]'
 \echo 'EXPECTED BEHAVIOR:RETURNS DATA FOR ROUTE 1 SCHED 1'
-SELECT * FROM single_trip_route_search(1, 20, 1);
+SELECT * FROM single_trip_route_search(1, 20, 3);
+
+
+\echo 'TEST CASE: PARTIAL TRIP CHECK single_trip_route_search [day 1, stations 1-11]'
+\echo 'EXPECTED BEHAVIOR:RETURNS DATA FOR ROUTE 1 SCHED 1 for partial trip'
+\echo 'Data totals should all be smaller than the full route (price, distance, time, etc)'
+SELECT * FROM single_trip_route_search(1, 11, 3);
+
+
+\echo 'TEST CASE: combo_search'
+\echo 'EXPECTED BEHAVIOR: sort by stops'
+SELECT * FROM sort_CTRS(1, true, 237, 256, 4);
+\echo '\n'
+
+\echo 'TEST CASE: combo_search'
+\echo 'EXPECTED BEHAVIOR: sort by stops (descending)'
+SELECT * FROM sort_CTRS(1, false, 237, 256, 4);
+\echo '\n'
+
+
+\echo 'TEST CASE: combo_search '
+\echo 'EXPECTED BEHAVIOR: sort by num stations passed'
+SELECT * FROM sort_CTRS(2, true, 237, 256, 4);
+\echo '\n'
+
+\echo 'TEST CASE: combo_search'
+\echo 'EXPECTED BEHAVIOR: sort by price'
+SELECT * FROM sort_CTRS(3, true, 237, 256, 4);
+\echo '\n'
+
+
+\echo 'TEST CASE: combo_search'
+\echo 'EXPECTED BEHAVIOR: sort by time'
+SELECT * FROM sort_CTRS(4, true, 237, 256, 4);
+\echo '\n'
+
+
+\echo 'TEST CASE: combo_search'
+\echo 'EXPECTED BEHAVIOR: sort by distance'
+SELECT * FROM sort_CTRS(5, true, 237, 256, 4);
+\echo '\n'
+
 
 
 \echo 'TEST CASE: trains_through_this_station(station 1, day 3, 15:00:00) -- this is route 1'
@@ -31,12 +72,13 @@ SELECT * FROM trains_through_this_station('15:00:00', 3, 1);
 
 
 \echo 'TEST CASE: more_than_one_rail()'
-\echo 'EXPECTED BEHAVIOR: more than half the route ids, based on how they were generated'
-SELECT * FROM more_than_one_rail() ORDER BY route_id ASC;
+\echo 'EXPECTED BEHAVIOR: a lot of results, but limited by query detail here'
+SELECT * FROM more_than_one_rail() LIMIT 10;
 
 
 \echo 'TEST CASE: same_stations_diff_stops()'
-\echo 'EXPECTED BEHAVIOR: A handful of results'
+\echo 'EXPECTED BEHAVIOR: A handful of results easy to verify w/ statements like:'
+\echo 'select * from route_stations where route_id = first_result or route_id = second_result;'
 SELECT * FROM same_stations_diff_stops();
 
 
@@ -45,21 +87,17 @@ SELECT * FROM same_stations_diff_stops();
 SELECT * FROM get_route_schedule(1);
 
 
-\echo 'TEST CASE: find_route_availability(route 1, day 1, time 8 9 or 10)'
-\echo 'EXPECTED BEHAVIOR: shows availibility for route 1 in one of the 3 queries (other 2 blank)'
-SELECT * FROM find_route_availability(1, 1, '08:00:00');
-SELECT * FROM find_route_availability(1, 1, '09:00:00');
-SELECT * FROM find_route_availability(1, 1, '10:00:00');
+\echo 'TEST CASE: find_route_availability(route 1, day 3, time 15:00:00)'
+\echo 'EXPECTED BEHAVIOR: shows availibility for route 1, which has 20 trips from stations 1 to 20'
+SELECT * FROM find_route_availability(1, 3, '15:00:00');
 
 
-\echo 'TEST CASE: make_reservation(5 tickets on schedule id #1)'
+\echo 'TEST CASE: make_reservation(50 tickets on schedule id #487 -- same one displayed before)'
 \echo 'EXPECTED BEHAVIOR: no errors for make_reservation itself (returns nothing)'
 \echo 'Second set of calls to find_route_availability() should show number of seats'
-\echo 'is lower by 5 for EACH LEG of the scheduled route'
-SELECT make_reservation('agent3', 4, 1, 5, 1, 10);
-SELECT * FROM find_route_availability(1, 1, '08:00:00');
-SELECT * FROM find_route_availability(1, 1, '09:00:00');
-SELECT * FROM find_route_availability(1, 1, '10:00:00');
+\echo 'is lower by 50 for EACH LEG of the scheduled route'
+SELECT make_reservation('agent3', 4, 487, 50, 1, 20);
+SELECT * FROM find_route_availability(1, 3, '15:00:00');
 
 
 \echo 'TEST CASE: create_customer_account() AND view_customer_account()'
@@ -71,13 +109,13 @@ SELECT * FROM view_customer_account(
 
 \echo 'TEST CASE: attempt INSERTing schedule on a rail already in use at that day/time'
 \echo 'EXPECTED BEHAVIOR: raises exception stating the rail is already in use (either once or twice here)'
-INSERT INTO SCHEDULE VALUES(1, '08:00:00', 14, 200, true);
-INSERT INTO SCHEDULE VALUES(1, '09:00:00', 14, 201, true);
+INSERT INTO SCHEDULE VALUES(3, '15:00:00', 1, 200, true);
+INSERT INTO SCHEDULE VALUES(3, '15:00:00', 1, 201, true);
 \echo '\n'
 
 \echo 'TEST CASE: attempt INSERTing schedule for a route where destination station(s) will close before route completion'
 \echo 'EXPECTED BEHAVIOR: raises exception stating the rail is already in use (either once or twice here)'
-INSERT INTO SCHEDULE VALUES(1, '22:00:00', 15, 200, true);
+INSERT INTO SCHEDULE VALUES(1, '23:00:00', 15, 200, true);
 \echo '\n'
 
 \echo 'TEST CASE: attempt INSERTing a booking for a trip which will overbook the train'
@@ -117,144 +155,4 @@ INSERT INTO TRAIN (top_speed, seats, ppm) VALUES(0, 100, 1.5);
 INSERT INTO TRAIN (top_speed, seats, ppm) VALUES(-2, 100, 1.5);
 INSERT INTO TRAIN (top_speed, seats, ppm) VALUES(50, 0, 1.5);
 INSERT INTO TRAIN (top_speed, seats, ppm) VALUES(50, -1, 1.5);
-\echo '\n'
-
-\echo 'TEST SUITE: verify sorting of single_trip_route_search works for all parameters'
-\echo '----SETTING UP NEEDED DATA TO PERFORM THE TESTS----'
--- create new data for this to make the test more dynamic/less brittle --
--- new route will be created to mirror the direction of schedule 1
-INSERT INTO RAIL_LINE (speed_limit) 
-	VALUES(100);
-INSERT INTO CONNECTION (station_1, station_2, rail, distance)
-	VALUES(1, 10, (SELECT MAX(rail_id) FROM RAIL_LINE), 10.0);
-INSERT INTO TRAIN (top_speed, seats, ppm)
-	VALUES(120, 200, 1);
-INSERT INTO TRAIN_ROUTE (description) 
-	VALUES('test route from station 1 to station 10');
-INSERT INTO ROUTE_STATIONS (ordinal, stops_here, station_id, route_id, conn_id)
-	VALUES(1, true, 1, (SELECT MAX(route_id) FROM TRAIN_ROUTE), null),
-	(2, true, 10, (SELECT MAX(route_id) FROM TRAIN_ROUTE), (SELECT MAX(conn_id) FROM CONNECTION));
-INSERT INTO SCHEDULE (sched_day, sched_time, t_route, train_id, is_forward)
-	VALUES(1, '10:00:00', (SELECT MAX(route_id) FROM TRAIN_ROUTE), (SELECT MAX(train_id) FROM TRAIN),
-	(SELECT is_forward FROM SCHEDULE as s WHERE s.sched_id = 1));
-
-\echo '\n'
-
-
-\echo 'TEST CASE: test single_trip_route_search sorting by number of stops ascending, then descending'
-\echo 'EXPECTED BEHAVIOR: first result lists route with fewest stops (2) first, second lists it last'
-\echo 'should have two queries with blank results also (only one direction should work here)'
--- sort_STRS(order_by_option INT, order_asc BOOLEAN, arr_st INT, dest_st INT, target_day INT)
-/*
-* order_by_option values:
-* 1: stops
-* 2: stations passed
-* 3: total price
-* 4: total time
-* 5: total distance
-* default: distance
-*/
-SELECT * FROM sort_STRS(1, true, 1, 10, 1);
-SELECT * FROM sort_STRS(1, false, 1, 10, 1);
-
-SELECT * FROM sort_STRS(1, true, 10, 1, 1);
-SELECT * FROM sort_STRS(1, false, 10, 1, 1);
-\echo '\n'
-
-
-
-\echo 'TEST CASE: test single_trip_route_search sorting by number stations passed ascending, then descending'
-\echo 'EXPECTED BEHAVIOR: first result lists route with smallest # of stations first, second lists it last'
-\echo 'should have two queries with blank results also (only one direction should work here)'
--- sort_STRS(order_by_option INT, order_asc BOOLEAN, arr_st INT, dest_st INT, target_day INT)
-/*
-* order_by_option values:
-* 1: stops
-* 2: stations passed
-* 3: total price
-* 4: total time
-* 5: total distance
-* default: distance
-*/
-SELECT * FROM sort_STRS(2, true, 1, 10, 1);
-SELECT * FROM sort_STRS(2, false, 1, 10, 1);
-
-SELECT * FROM sort_STRS(2, true, 10, 1, 1);
-SELECT * FROM sort_STRS(2, false, 10, 1, 1);
-\echo '\n'
-
-
-
-\echo 'TEST CASE: test single_trip_route_search sorting by total price ascending, then descending'
-\echo 'EXPECTED BEHAVIOR: first result lists cheapest route first, second lists it last'
-\echo 'should have two queries with blank results also (only one direction should work here)'
--- sort_STRS(order_by_option INT, order_asc BOOLEAN, arr_st INT, dest_st INT, target_day INT)
-/*
-* order_by_option values:
-* 1: stops
-* 2: stations passed
-* 3: total price
-* 4: total time
-* 5: total distance
-* default: distance
-*/
-SELECT * FROM sort_STRS(3, true, 1, 10, 1);
-SELECT * FROM sort_STRS(3, false, 1, 10, 1);
-
-SELECT * FROM sort_STRS(3, true, 10, 1, 1);
-SELECT * FROM sort_STRS(3, false, 10, 1, 1);
-\echo '\n'
-
-
-
-\echo 'TEST CASE: test single_trip_route_search sorting by total time ascending, then descending'
-\echo 'EXPECTED BEHAVIOR: first result lists fastest (least elapsed time) route first, second lists it last'
-\echo 'should have two queries with blank results also (only one direction should work here)'
--- sort_STRS(order_by_option INT, order_asc BOOLEAN, arr_st INT, dest_st INT, target_day INT)
-/*
-* order_by_option values:
-* 1: stops
-* 2: stations passed
-* 3: total price
-* 4: total time
-* 5: total distance
-* default: distance
-*/
-SELECT * FROM sort_STRS(4, true, 1, 10, 1);
-SELECT * FROM sort_STRS(4, false, 1, 10, 1);
-
-SELECT * FROM sort_STRS(4, true, 10, 1, 1);
-SELECT * FROM sort_STRS(4, false, 10, 1, 1);
-\echo '\n'
-
-
-
-\echo 'TEST CASE: test single_trip_route_search sorting by total distance ascending, then descending'
-\echo 'EXPECTED BEHAVIOR: first result lists shortest (distance) route first, second lists it last'
-\echo 'should have two queries with blank results also (only one direction should work here)'
--- sort_STRS(order_by_option INT, order_asc BOOLEAN, arr_st INT, dest_st INT, target_day INT)
-/*
-* order_by_option values:
-* 1: stops
-* 2: stations passed
-* 3: total price
-* 4: total time
-* 5: total distance
-* default: distance
-*/
-SELECT * FROM sort_STRS(5, true, 1, 10, 1);
-SELECT * FROM sort_STRS(5, false, 1, 10, 1);
-
-SELECT * FROM sort_STRS(5, true, 10, 1, 1);
-SELECT * FROM sort_STRS(5, false, 10, 1, 1);
-\echo '\n'
-
-
-
-\echo 'TEST CASE: test that single_trip_route_search excludes full trips from its results'
-\echo 'EXPECTED BEHAVIOR: after booking test route to full, searches only find route 1'
-\echo 'should have one query with a blank result also (only one direction should work here)'
-INSERT INTO BOOKING VALUES('agent5', 50, (SELECT MAX(trip_id) FROM TRIP), 200);
-SELECT * FROM sort_STRS(1, true, 1, 10, 1);
-SELECT * FROM sort_STRS(1, true, 10, 1, 1);
 \echo '\n'

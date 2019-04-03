@@ -2,14 +2,16 @@ from random import randint
 import random
 from datetime import datetime, time, date, timedelta
 
-NUM_RAIL_LINES = 20
-NUM_STATIONS = 100
+NUM_RAIL_LINES = 40
+NUM_STATIONS = 400
 NUM_TRAINS = 350
 NUM_PASSENGERS = 300
-NUM_SCHEDULES = 2000
 NUM_ROUTES = 500
 NUM_TRACKS = 500
 NUM_AGENTS = 100
+
+CANDIDATE_SCHEDULES = 5000
+TARGET_SCHEDULES = 2000
 
 #dict tracks which connection connects a 2-station tuple
 connection_map = {}
@@ -18,7 +20,7 @@ connection_map = {}
 with open('trains.dat', 'w+') as train_file:
 	train_file.write('TRAIN\n')
 	for i in range(NUM_TRAINS):
-		top_speed = 60 + randint(0, 15) * 5
+		top_speed = 80 + randint(0, 20) * 5
 		seats = randint(150, 301)
 		ppm = (randint(1, 10) / 40.0)
 		train = (top_speed, seats, ppm)
@@ -28,10 +30,10 @@ with open('trains.dat', 'w+') as train_file:
 with open('stations.dat', 'w+') as station_file:
 	station_file.write('STATION\n')
 	for i in range(NUM_STATIONS):
-		address = '123 Fake Street'
+		address = str(i) + ' Fake Street'
 		city = 'Faketown'
 		zip_code = '15217'
-		open_hour_options = [5, 6, 7]
+		open_hour_options = [2, 3, 4, 5, 6]
 		close_hour_options = [21, 22, 23]
 		minute_options = [0, 15, 30, 45]
 		o = time(random.choice(open_hour_options), random.choice(minute_options))
@@ -61,7 +63,7 @@ with open('passenger.dat', 'w+') as passenger_file:
 		phone  = ''
 		for i in range(10):
 			phone += str( randint(0, 9) )
-		address = '123 Fake Street'
+		address = str (i) + ' Fake Avenue'
 		city = 'Faketown'
 		zip_code = '15217'
 		passenger = (fname, lname, email, phone, address, city, zip_code)
@@ -71,7 +73,7 @@ with open('passenger.dat', 'w+') as passenger_file:
 with open('rail_lines.dat', 'w+') as rail_file:
 	rail_file.write('RAIL_LINE\n')
 	for i in range(NUM_RAIL_LINES):
-		speed_limit = 50 + randint(0, 15) * 5
+		speed_limit = 70 + randint(0, 20) * 5
 		rail = (speed_limit)
 		rail_file.write( "(" + str(rail) + ')\n' )
 
@@ -100,7 +102,7 @@ with open('connections.dat', 'w+') as conn_file:
 			station2_id = i+1
 
 		rail_id = (int)(i / grid_width) + 1
-		distance = randint(2, 75)
+		distance = randint(1, 40)
 		distance += random.choice(fractions)
 		connection = (station1_id, station2_id, rail_id, distance)
 
@@ -121,7 +123,7 @@ with open('connections.dat', 'w+') as conn_file:
 			station2_id = (i + grid_width)
 
 		rail_id = (int)(i % grid_width) + grid_width + 1
-		distance = randint(2, 75)
+		distance = randint(1, 40)
 		distance += random.choice(fractions)
 		connection = (station1_id, station2_id, rail_id, distance)
 
@@ -132,6 +134,7 @@ with open('connections.dat', 'w+') as conn_file:
 		conn_file.write( str(connection) + '\n' )
 
 		conn_id += 1
+	
 
 # build route_stations
 with open('route_stations.dat', 'w+') as rs_file:
@@ -186,17 +189,68 @@ with open('route_stations.dat', 'w+') as rs_file:
 			', ' + str(route_id) + ', ' +  str(conn_id) + ')\n' )
 
 
-sched_id = 0
+	stations_used = []
 
+	for x in range(NUM_RAIL_LINES, NUM_ROUTES):
+		route_id = x
+		station_id = randint(1, NUM_STATIONS)
+		stops_here = True
+		ordinal = 1
+		conn_id = 'null'
+		while(True):
+			rs_file.write( '(' + str(ordinal) + ', ' + str(stops_here) + ', ' + str(station_id) + 
+			', ' + str(route_id) + ', ' +  str(conn_id) + ')\n' )
+
+			stations_used.append(station_id)
+			
+			ordinal += 1
+			if ordinal == 4:
+				stations_used = []
+				break
+
+			if ordinal == 3 or randint(0,1) == 0:
+				stops_here = True
+			else:
+				stops_here = False
+
+			seeking = True
+			while(seeking):
+				next_station = randint(0, 3)
+				if next_station == 0 and (station_id-grid_width) not in stations_used: #case up
+					conn_id = connection_map.get((station_id, station_id-grid_width))
+					if conn_id == None:
+						continue
+					station_id -= grid_width
+					seeking = False
+				elif next_station == 1 and (station_id-1) not in stations_used: #case left
+					conn_id = connection_map.get((station_id, station_id-1))
+					if conn_id == None:
+						continue
+					station_id -= 1
+					seeking = False		
+				elif next_station == 2 and (station_id+1) not in stations_used: #case right
+					conn_id = connection_map.get((station_id, station_id+1))
+					if conn_id == None:
+						continue
+					station_id += 1
+					seeking = False
+				elif next_station == 3 and (station_id+grid_width) not in stations_used: #case down
+					conn_id = connection_map.get((station_id, station_id+grid_width))
+					if conn_id == None:
+						continue
+					station_id += grid_width
+					seeking = False
+			
+
+"""
 # build schedules
 with open('schedules.dat', 'w+') as sched_file:
 	sched_file.write('SCHEDULE\n')
-	grid_width = (int)(NUM_RAIL_LINES / 2)
 
 	for day in range(1, 7):
 		sched_time = time(hour = randint(8, 10))
 
-		for rail in range(1, NUM_RAIL_LINES + 1):
+		for rail in range(1, NUM_RAIL_LINES):
 			train_route = rail
 			train_id = rail
 			if randint(0, 1) == 0:
@@ -206,11 +260,34 @@ with open('schedules.dat', 'w+') as sched_file:
 			sched = (day, str(sched_time), train_route, train_id, is_forward)
 			sched_file.write( str(sched) + '\n' )
 			sched_id += 1
+"""
+
+# throw schedules at the system and see what sticks
+with open('stochastic_schedules.dat', 'w+') as kitchen_sink_file:
+	kitchen_sink_file.write('SCHEDULE\n')
+
+	train_id = 1
+
+	for sched_no in range(1, CANDIDATE_SCHEDULES):
+		sched_time = time(hour = randint(2, 20))
+		train_route = randint(1, NUM_ROUTES)
+		day = randint(1, 7)
+		if randint(0, 1) == 0:
+			is_forward = True
+		else:
+			is_forward = False
+
+		sched = (day, str(sched_time), train_route, train_id, is_forward)
+		kitchen_sink_file.write( str(sched) + '\n' )
+
+		train_id = (train_id + 1) % (NUM_TRAINS + 1)
+
+
 
 # build bookings
 with open('bookings.dat', 'w+') as book_file:
 	book_file.write('BOOKING\n')
-	while(sched_id > 0):
+	for sched_id in range(TARGET_SCHEDULES):
 		for i in range(5):
 			passenger_id = randint(1, NUM_PASSENGERS)
 			agent_username = 'agent' + str(randint(0, NUM_AGENTS-1))
@@ -218,4 +295,4 @@ with open('bookings.dat', 'w+') as book_file:
 
 			booking = (agent_username, passenger_id, sched_id, num_tickets)
 			book_file.write( str(booking) + '\n' )
-		sched_id -= 1
+		
