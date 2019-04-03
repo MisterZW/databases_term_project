@@ -247,7 +247,7 @@ BEGIN
                             AND r1.stops_here IS TRUE
                             AND r2.stops_here IS TRUE
                             AND NOT EXISTS (SELECT * FROM find_route_availability(s.t_route, s.sched_day, s.sched_time)
-                                WHERE seats_left <= 0)
+                                WHERE seats_left <= 0 LIMIT 1)
                             AND CASE WHEN s.is_forward IS TRUE
                                 THEN r1.ordinal < r2.ordinal
                                 ELSE r1.ordinal > r2.ordinal
@@ -417,7 +417,9 @@ RETURN QUERY (SELECT DISTINCT tr1.route_id, tr2.route_id
                                 )
 
                  AND EXISTS( SELECT rsa.station_id FROM ROUTE_STATIONS as rsa, ROUTE_STATIONS as rsb
-                             WHERE rsa.route_id <> rsb.route_id
+                             WHERE rsa.route_id < rsb.route_id
+                             AND rsa.route_id = tr1.route_id
+                             AND rsb.route_id = tr2.route_id
                              AND rsa.station_id = rsb.station_id
                              AND rsa.stops_here IS TRUE
                              AND rsb.stops_here IS FALSE )
@@ -693,6 +695,3 @@ BEGIN
 END;
 $$
 LANGUAGE 'plpgsql';
-
-
-
