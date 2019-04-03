@@ -11,7 +11,7 @@ SELECT * FROM trains_which_dont_go_here(1) WHERE train_id < 10;
 
 
 \echo 'TEST CASE: stations_all_trains_pass_through()'
-\echo 'EXPECTED BEHAVIOR: NO RESULTING ROWS'
+\echo 'EXPECTED BEHAVIOR: NO ROWS RETURNED'
 SELECT * FROM stations_all_trains_pass_through();
 
 
@@ -20,52 +20,23 @@ SELECT * FROM stations_all_trains_pass_through();
 SELECT * FROM greater_than_percent_stops(75);
 
 
-\echo 'TEST CASE: single_trip_route_search [day 1, stations 1-10 both directions]'
-\echo 'EXPECTED BEHAVIOR: ONE OF THESE RETURNS DATA FOR ROUTE 1 SCHED 1'
-\echo 'THE OTHER WILL RETURN EMPTY (EXACT RESULT DEPENDS ON DIRECTION OF SCHEDULE)'
-SELECT * FROM single_trip_route_search(1, 10, 1);
-SELECT * FROM single_trip_route_search(10, 1, 1);
+\echo 'TEST CASE: single_trip_route_search [day 1, stations 1-20]'
+\echo 'EXPECTED BEHAVIOR:RETURNS DATA FOR ROUTE 1 SCHED 1'
+SELECT * FROM single_trip_route_search(1, 20, 1);
 
 
-\echo 'TEST CASE: trains_through_this_station(stations 1 and 10)'
-\echo 'EXPECTED BEHAVIOR: AT LEAST ONE OF THESE QUERIES SHOULD FIND TRAIN 1'
-\echo 'WILL LIKELY RETURN OTHER RESULTS (maybe 11, 20, etc)'
-SELECT * FROM trains_through_this_station('08:00:00', 1, 1);
-SELECT * FROM trains_through_this_station('09:00:00', 1, 1);
-SELECT * FROM trains_through_this_station('10:00:00', 1, 1);
-SELECT * FROM trains_through_this_station('08:00:00', 1, 10);
-SELECT * FROM trains_through_this_station('09:00:00', 1, 10);
-SELECT * FROM trains_through_this_station('10:00:00', 1, 10);
+\echo 'TEST CASE: trains_through_this_station(station 1, day 3, 15:00:00) -- this is route 1'
+\echo 'EXPECTED BEHAVIOR: AT LEAST ONE OF THESE QUERIES SHOULD FIND TRAIN 321'
+SELECT * FROM trains_through_this_station('15:00:00', 3, 1);
 
 
 \echo 'TEST CASE: more_than_one_rail()'
-\echo 'EXPECTED BEHAVIOR: NO RESULTING ROWS'
-SELECT * FROM more_than_one_rail();
+\echo 'EXPECTED BEHAVIOR: more than half the route ids, based on how they were generated'
+SELECT * FROM more_than_one_rail() ORDER BY route_id ASC;
 
 
 \echo 'TEST CASE: same_stations_diff_stops()'
-\echo 'EXPECTED BEHAVIOR: NO RESULTING ROWS'
-SELECT * FROM same_stations_diff_stops();
-
-
-\echo 'ADDING A SIMILAR ROUTE TO FIND!'
-START TRANSACTION;
-INSERT INTO ROUTE_STATIONS VALUES(1, false, 1, 50, null);
-INSERT INTO ROUTE_STATIONS VALUES(2, true, 2, 50, 1);
-INSERT INTO ROUTE_STATIONS VALUES(3, true, 3, 50, 2);
-INSERT INTO ROUTE_STATIONS VALUES(4, true, 4, 50, 3);
-INSERT INTO ROUTE_STATIONS VALUES(5, true, 5, 50, 4);
-INSERT INTO ROUTE_STATIONS VALUES(6, true, 6, 50, 5);
-INSERT INTO ROUTE_STATIONS VALUES(7, true, 7, 50, 6);
-INSERT INTO ROUTE_STATIONS VALUES(8, true, 8, 50, 7);
-INSERT INTO ROUTE_STATIONS VALUES(9, true, 9, 50, 8);
-INSERT INTO ROUTE_STATIONS VALUES(10, false, 10, 50, 9);
-COMMIT;
-\echo '\n'
-
-
-\echo 'TEST CASE 2: same_stations_diff_stops()'
-\echo 'EXPECTED BEHAVIOR: 1 RESULTING ROW with the new route'
+\echo 'EXPECTED BEHAVIOR: A handful of results'
 SELECT * FROM same_stations_diff_stops();
 
 
