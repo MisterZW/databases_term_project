@@ -107,6 +107,15 @@ SELECT * FROM view_customer_account(
 	);
 
 
+\echo 'TEST CASE: update_customer_account()'
+\echo 'EXPECTED BEHAVIOR: First query shows stock customer data, then update returns void'
+\echo 'Second query shows updated customer information'
+
+SELECT * FROM PASSENGER WHERE customer_ID = 1;
+SELECT update_customer_account(1, 'zach', 'whit', 'zdw9@pitt.edu', '1212121212', 'Sennott', 'pgh', '54321');
+SELECT * FROM PASSENGER WHERE customer_ID = 1;
+
+
 \echo 'TEST CASE: attempt INSERTing schedule on a rail already in use at that day/time'
 \echo 'EXPECTED BEHAVIOR: raises exception stating the rail is already in use (either once or twice here)'
 INSERT INTO SCHEDULE VALUES(3, '15:00:00', 1, 200, true);

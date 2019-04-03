@@ -16,6 +16,28 @@ $$
 LANGUAGE 'plpgsql';
 
 
+-- Change customer information in the system wholesale (ID# cannot be altered)
+CREATE OR REPLACE FUNCTION update_customer_account(id_no INT, fname VARCHAR, lname VARCHAR, em VARCHAR,
+    ph CHAR, addr VARCHAR, c VARCHAR, z CHAR)
+RETURNS VOID
+AS $$
+BEGIN
+    UPDATE PASSENGER
+    SET first_name = fname,
+        last_name = lname,
+        email = em,
+        phone = ph,
+        street_address = addr,
+        city = c,
+        zip = z
+    WHERE customer_ID = id_no;
+    RETURN;
+END;
+$$
+LANGUAGE 'plpgsql';
+
+  
+
 -- View client data by client id number
 CREATE OR REPLACE FUNCTION view_customer_account(id_no INT)
 RETURNS TABLE (
@@ -35,11 +57,6 @@ END;
 $$
 LANGUAGE 'plpgsql';
 
-
--- Update client data
---  UPDATE PASSENGER
---  SET $$old_field = $$new_value
---  WHERE customer_id = $$id;
 
 
 -- Make a reservation for all trips between arr_station and dest_station on a schedule
