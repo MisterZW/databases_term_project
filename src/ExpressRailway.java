@@ -33,14 +33,14 @@ public class ExpressRailway {
 		
 		String menu = "--------Welcome to Express Railway---------\n\n"
 							+ "\t1. Add a new customer account\n"
-							+ "\t2. Edit a a customer account\n"
+							+ "\t2. Edit a customer account\n"
 							+ "\t3. View customer account information\n"
 							+ "\t4. Single Route Trip Search\n"
 							+ "\t5. Combination Route Trip Search\n"
 							+ "\t6. Add Reservation\n"
 							+ "\t7. Find trains which pass through a specific station at a given time\n"
-							+ "\t8. Find trains with more than one rail line\n"
-							+ "\t9. Find routes with more than one line\n"
+							+ "\t8. Find routes which travel more than one rail line\n"
+							+ "\t9. Find routes which pass through the same stations but have different stops\n"
 							+ "\t10. Find stations that all trains pass through\n"
 							+ "\t11. Find all trains that does not stop at a specific station\n"
 							+ "\t12. Find routes that stop at a certain percent of stations\n"
@@ -77,6 +77,7 @@ public class ExpressRailway {
 				trainsThruStation();
 				break;
 			case "8":
+				moreThanOneRail();
 				break;
 			case "9":
 				break;
@@ -166,6 +167,8 @@ public class ExpressRailway {
 	# Prints the new customer ID if successful
 	*/
 	public boolean addNewCustomer() {
+		System.out.println("----Add a new customer account----");
+
 		String fname = getStringFromUser("Enter the customer's first name: ");
 		String lname = getStringFromUser("Enter the customer's last name: ");
 		String email = getStringFromUser("Enter the customer's email address: ");
@@ -203,10 +206,12 @@ public class ExpressRailway {
 
 
 	/*
-	* Insert a new customer in to the system
-	# Prints the new customer ID if successful
+	* Edit an existing customer's data in the database
+	* Prints the current data associated with that customer for reference
+	* Then, prompts for new data to populate ALL fields except customer ID for simplicity
 	*/
 	public boolean editCustomer() {
+		System.out.println("----Edit a customer account----");
 		int cust_id = getIntFromUser("Enter the customer ID for the record you wish to edit: ", 1, Integer.MAX_VALUE);
 
 		try {
@@ -227,7 +232,7 @@ public class ExpressRailway {
 		
 			PreparedStatement ps = conn.prepareStatement(
 					"SELECT * FROM update_customer_account(?, ?, ?, ?, ?, ?, ?, ?);");
-			ps.setString(1, cust_id.toString());
+			ps.setInt(1, cust_id);
 			ps.setString(2, fname);
 			ps.setString(3, lname);
 			ps.setString(4, email);
@@ -250,6 +255,7 @@ public class ExpressRailway {
 	* View customer data associated with a given customer's ID # in the database
 	*/
 	public void viewCustomer() {
+		System.out.println("----View customer account information----");
 		int cust_id = getIntFromUser("Enter the customer's ID number: ", 1, Integer.MAX_VALUE);
 		try {
 			Statement st = conn.createStatement();
@@ -292,7 +298,7 @@ public class ExpressRailway {
 	* station on a specific day and time.
 	********************************************************************/
 	public void trainsThruStation() {
-		System.out.println("Find trains which pass through a specific station at a given time");
+		System.out.println("----Find trains which pass through a specific station at a given time----");
 
 		int target_station = getIntFromUser("Enter the station's ID #: ", 1, Integer.MAX_VALUE);
 		int target_day = getIntFromUser("Enter the travel day: ", 1, 7);
@@ -312,6 +318,21 @@ public class ExpressRailway {
 			handleSQLException(e);
 		}
 	}
+
+	/* Find the routes that travel more than one rail line */
+	public void moreThanOneRail() {
+		System.out.println("----Find routes which travel more than one rail line----");
+		try {
+			Statement st = conn.createStatement();
+			String query = "SELECT * FROM more_than_one_rail()";
+			ResultSet rs = st.executeQuery(query);
+			printResultSet(rs);
+		}
+		catch (SQLException e) {
+			handleSQLException(e);
+		}
+	}
+
 
 	/* Prints relevant details regarding SQLExceptions */
 	private static void handleSQLException(SQLException ex) {
