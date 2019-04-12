@@ -19,34 +19,31 @@ public class ExpressRailway {
 
 		conn = DriverManager.getConnection(url, props);
 
-		//begin the UI menu
-		singleTripRouteSearch(1, 20, 3);
-
+		UIMenu();
 	}
 
-	public static void UIMenu(){
+	public void UIMenu(){
 		scan = new Scanner(System.in);
 		String start = "--------Welcome to Express Railway---------"
 							+ "			Login Menu		"
 							+ "\t1. Log In";
 		
-		String menu = "--------Welcome to Express Railway---------"
-							+ "			Main Menu		"
-							+ "\t1. Single Route Trip Search"
-							+ "\t2. Combination Route Trip Search"
-							+ "\t3. Add Reservation"
-							+ "\t4. Find Specific Train"
-							+ "\t5. Find train with more than one rail line"
-							+ "\t6. Find routes with more than one line"
-							+ "\t7. Find stations that all trains pass through"
-							+ "\t8. Find all trains that does not stop at a specific station"
-							+ "\t9. Find routes that stop at a certain percent of stations"
-							+ "t\10. Display the schedule of a route"
-							+ "t\11. Find the availability of a route at every stop on a specific day"
-							+ "\t12. Import Database"
-							+ "t\13. Export Database"
-							+ "t\14. Delete Database"
-							+ "t\15. Exit";
+		String menu = "--------Welcome to Express Railway---------\n"
+							+ "\t1. Single Route Trip Search\n"
+							+ "\t2. Combination Route Trip Search\n"
+							+ "\t3. Add Reservation\n"
+							+ "\t4. Find Specific Train\n"
+							+ "\t5. Find train with more than one rail line\n"
+							+ "\t6. Find routes with more than one line\n"
+							+ "\t7. Find stations that all trains pass through\n"
+							+ "\t8. Find all trains that does not stop at a specific station\n"
+							+ "\t9. Find routes that stop at a certain percent of stations\n"
+							+ "\t10. Display the schedule of a route\n"
+							+ "\t11. Find the availability of a route at every stop on a specific day\n"
+							+ "\t12. Import Database\n"
+							+ "\t13. Export Database\n"
+							+ "\t14. Delete Database\n"
+							+ "\t15. Exit\n";
 		
 		while(true) {
 			System.out.println(menu);
@@ -55,6 +52,7 @@ public class ExpressRailway {
 			
 			switch(input) {
 			case "1":
+				singleTripRouteSearch();
 				break;
 			case "2":
 				break;
@@ -83,6 +81,7 @@ public class ExpressRailway {
 			case "14":
 				break;
 			case "15":
+				scan.close();
 				System.exit(0);
 				break;
 			default:
@@ -97,8 +96,26 @@ public class ExpressRailway {
 		new ExpressRailway();
 	}
 
-	public void singleTripRouteSearch(int arrival_station, int destination_station, int target_day) {
-	
+	public int getIntFromUser(String prompt, int min, int max) {
+		int result;
+		do {
+		    System.out.print(prompt);
+		    while (!scan.hasNextInt()) {
+		        System.out.print("\n" + prompt);
+		        scan.next(); // this is important!
+		    }
+		    result = scan.nextInt();
+		} while (result < min || result > max);
+		return result;
+	}
+
+
+	public void singleTripRouteSearch() {
+		System.out.println("----Single Route Trip Search----");
+		int arrival_station = getIntFromUser("Enter the arrival station ID #: ", 1, Integer.MAX_VALUE);
+		int destination_station = getIntFromUser("Enter the destination station ID #: ", 1, Integer.MAX_VALUE);
+		int target_day = getIntFromUser("Enter the travel day: ", 1, 7);
+
 		try {
 			Statement st = conn.createStatement();
 			String query = "SELECT * FROM single_trip_route_search(" + arrival_station + ", " + 
