@@ -11,3 +11,6 @@ This folder contains the ER model used at the start of this project
 
 ### SQL
 This folder holds the SQL files used to create the database
+
+### SRC
+This folder contains the Java source files for the client application

@@ -61,6 +61,7 @@ public class ExpressRailway {
 				addNewCustomer();
 				break;
 			case "2":
+				editCustomer();
 				break;
 			case "3":
 				viewCustomer();
@@ -196,6 +197,51 @@ public class ExpressRailway {
 		catch (SQLException e) {
 			handleSQLException(e);
 			System.out.println("Sorry, there was a problem entering that user into the database.");
+		}
+		return false;
+	}
+
+
+	/*
+	* Insert a new customer in to the system
+	# Prints the new customer ID if successful
+	*/
+	public boolean editCustomer() {
+		int cust_id = getIntFromUser("Enter the customer ID for the record you wish to edit: ", 1, Integer.MAX_VALUE);
+
+		try {
+			Statement st = conn.createStatement();
+			String query = String.format("SELECT * FROM view_customer_account(%d);", cust_id);
+			ResultSet rs1 = st.executeQuery(query);
+			System.out.println("----Here is the current record for Passenger " + cust_id + "----");
+			printResultSet(rs1);
+			System.out.println("----Please enter the new information for Passenger " + cust_id + "----");
+			String fname = getStringFromUser("Enter the customer's first name: ");
+			String lname = getStringFromUser("Enter the customer's last name: ");
+			String email = getStringFromUser("Enter the customer's email address: ");
+			String phone = getNlengthString("Enter the customer's phone number (Format ##########): ", PHONE_NUMBER_LENGTH);
+			String street_addr = getStringFromUser("Enter the customer's street address: ");
+			String city = getStringFromUser("Enter the customer's city: ");
+			String zip = getNlengthString("Enter the customer's ZIP code (Format #####): ", ZIP_LENGTH);
+
+		
+			PreparedStatement ps = conn.prepareStatement(
+					"SELECT * FROM update_customer_account(?, ?, ?, ?, ?, ?, ?, ?);");
+			ps.setString(1, cust_id.toString());
+			ps.setString(2, fname);
+			ps.setString(3, lname);
+			ps.setString(4, email);
+			ps.setString(5, phone);
+			ps.setString(6, street_addr);
+			ps.setString(7, city);
+			ps.setString(8, zip);
+			ResultSet rs2 = ps.executeQuery();
+			System.out.printf("Customer ID %d's data has been updated successfully.\n", cust_id);
+			return true;
+		}
+		catch (SQLException e) {
+			handleSQLException(e);
+			System.out.println("Sorry, there was a problem updating the user's information in the database.");
 		}
 		return false;
 	}
