@@ -137,7 +137,7 @@ public class ExpressRailway {
 		String result;
 		do {
 		    System.out.print(prompt);
-		    result = scan.next();
+		    result = scan.nextLine();
 		} while (result.length() != length);
 		return result;
 	}
@@ -148,7 +148,7 @@ public class ExpressRailway {
 	private String getStringFromUser(String prompt) {
 		String result;
 		System.out.print(prompt);
-		result = scan.next();
+		result = scan.nextLine();
 		return result;
 	}
 
