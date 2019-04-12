@@ -8,6 +8,12 @@ public class ExpressRailway {
 
 	public final static int ZIP_LENGTH = 5;
 	public final static int PHONE_NUMBER_LENGTH = 10;
+	public final static String sort_menu = 	"---- SORTING OPTIONS ----\n" +
+											"1 -- Number of Stops\n" +
+											"2 -- Number of Stations Passed\n" +
+											"3 -- Total Price\n" +
+											"4 -- Total Time\n" +
+											"5 -- Total Distance";
 
 	private Connection conn;
 	private Properties props;
@@ -70,6 +76,7 @@ public class ExpressRailway {
 				singleTripRouteSearch();
 				break;
 			case "5":
+				comboTripRouteSearch();
 				break;
 			case "6":
 				break;
@@ -102,6 +109,7 @@ public class ExpressRailway {
 				System.exit(0);
 				break;
 			default:
+				System.out.println("Invalid option selected.");
 				continue;
 			}
 			confirmContinue();
@@ -160,6 +168,16 @@ public class ExpressRailway {
 		System.out.print(prompt);
 		result = scan.nextLine();
 		return result;
+	}
+
+	/* 
+	* gets true/false value from the user 
+	* maps inputs starting in 'Y' or 'y' to True and everything else to False
+	*/
+	private boolean getBooleanFromUser(String prompt) {
+		System.out.print(prompt);
+		String input = scan.nextLine();
+		return input.startsWith("Y") || input.startsWith("y");
 	}
 
 	/*
@@ -280,10 +298,46 @@ public class ExpressRailway {
 		int destination_station = getIntFromUser("Enter the destination station ID #: ", 1, Integer.MAX_VALUE);
 		int target_day = getIntFromUser("Enter the travel day: ", 1, 7);
 
+		System.out.println(sort_menu);
+		int sort_option = getIntFromUser("How would you like to sort your results? --> ", 1, 5);
+		boolean sort_asc = getBooleanFromUser("Would you like to sort from lowest to highest? (Y / N) --> ");
+
 		try {
 			Statement st = conn.createStatement();
-			String query = "SELECT * FROM single_trip_route_search(" + arrival_station + ", " + 
-			destination_station + ", " + target_day + ");";
+			String query = String.format("SELECT * FROM sort_STRS(%d, %s, %d, %d, %d);",
+				 sort_option, Boolean.toString(sort_asc), arrival_station, destination_station, target_day);
+			ResultSet rs = st.executeQuery(query);
+			printResultSet(rs);
+		}
+		catch (SQLException e) {
+			handleSQLException(e);
+		}
+	}
+
+	/******************************************************************************************
+	* Combinatory search function: Find all route combinations that stop
+	* at the specified Arrival Station and then at the specified Destination
+	* Station on a specified day of the week.
+	*
+	* Returns a table of integer arrays representing possible combinations of trip IDs
+	* which link source to sink in the graph (taking into account day and seats available)
+	*
+	* Also returns desciptive statistics about the route which is used to sort results
+	******************************************************************************************/
+	public void comboTripRouteSearch() {
+		System.out.println("----Combination Route Trip Search----");
+		int arrival_station = getIntFromUser("Enter the arrival station ID #: ", 1, Integer.MAX_VALUE);
+		int destination_station = getIntFromUser("Enter the destination station ID #: ", 1, Integer.MAX_VALUE);
+		int target_day = getIntFromUser("Enter the travel day: ", 1, 7);
+
+		System.out.println(sort_menu);
+		int sort_option = getIntFromUser("How would you like to sort your results? --> ", 1, 5);
+		boolean sort_asc = getBooleanFromUser("Would you like to sort from lowest to highest? (Y / N) --> ");
+
+		try {
+			Statement st = conn.createStatement();
+			String query = String.format("SELECT * FROM sort_CTRS(%d, %s, %d, %d, %d);",
+				 sort_option, Boolean.toString(sort_asc), arrival_station, destination_station, target_day);
 			ResultSet rs = st.executeQuery(query);
 			printResultSet(rs);
 		}
