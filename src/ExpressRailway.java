@@ -32,8 +32,8 @@ public class ExpressRailway {
 							+ "\t1. Single Route Trip Search\n"
 							+ "\t2. Combination Route Trip Search\n"
 							+ "\t3. Add Reservation\n"
-							+ "\t4. Find Specific Train\n"
-							+ "\t5. Find train with more than one rail line\n"
+							+ "\t4. Find trains which pass through a specific station at a given time\n"
+							+ "\t5. Find trains with more than one rail line\n"
 							+ "\t6. Find routes with more than one line\n"
 							+ "\t7. Find stations that all trains pass through\n"
 							+ "\t8. Find all trains that does not stop at a specific station\n"
@@ -59,6 +59,7 @@ public class ExpressRailway {
 			case "3":
 				break;
 			case "4":
+				trainsThruStation();
 				break;
 			case "5":
 				break;
@@ -102,13 +103,12 @@ public class ExpressRailway {
 		    System.out.print(prompt);
 		    while (!scan.hasNextInt()) {
 		        System.out.print("\n" + prompt);
-		        scan.next(); // this is important!
+		        scan.next();
 		    }
 		    result = scan.nextInt();
 		} while (result < min || result > max);
 		return result;
 	}
-
 
 	public void singleTripRouteSearch() {
 		System.out.println("----Single Route Trip Search----");
@@ -130,6 +130,28 @@ public class ExpressRailway {
 
 	}
 
+	public void trainsThruStation() {
+		System.out.println("Find trains which pass through a specific station at a given time");
+
+		int target_station = getIntFromUser("Enter the station's ID #: ", 1, Integer.MAX_VALUE);
+		int target_day = getIntFromUser("Enter the travel day: ", 1, 7);
+		int hour = getIntFromUser("Enter the travel hour: ", 0, 23);
+		int minute = getIntFromUser("Enter the travel minute: ", 0, 59);
+
+		String target_time = String.format("%02d:%02d:00", hour, minute);
+
+		try {
+			Statement st = conn.createStatement();
+			String query = "SELECT * FROM trains_through_this_station('" +
+			target_time + "', " + target_day + ", " + target_station + ");";
+			ResultSet rs = st.executeQuery(query);
+			printResultSet(rs);
+		}
+		catch (SQLException e) {
+			handleSQLException(e);
+		}
+	}
+
 	public void handleSQLException(SQLException ex) {
 		while (ex != null) {
 			System.out.println("Message = " + ex.getMessage());
@@ -141,24 +163,23 @@ public class ExpressRailway {
 
 	final public static void printResultSet(ResultSet rs) throws SQLException
 	{
-    ResultSetMetaData rsmd = rs.getMetaData();
-    int columnsNumber = rsmd.getColumnCount();
-    while (rs.next()) {
+	    ResultSetMetaData rsmd = rs.getMetaData();
+	    int columnsNumber = rsmd.getColumnCount();
+	    while (rs.next()) {
 
-    	for (int i = 1; i <= columnsNumber; i++) {
-			if (i > 1) System.out.print(" | ");
-			System.out.print(rsmd.getColumnName(i));
-		}
+	    	for (int i = 1; i <= columnsNumber; i++) {
+				if (i > 1) System.out.print(" | ");
+				System.out.print(rsmd.getColumnName(i));
+			}
 
-		System.out.println();
+			System.out.println();
 
-        for (int i = 1; i <= columnsNumber; i++) {
-            if (i > 1) System.out.print(" | ");
-            System.out.print(rs.getString(i));
-        }
-        System.out.println();
-    }
-
+	        for (int i = 1; i <= columnsNumber; i++) {
+	            if (i > 1) System.out.print(" | ");
+	            System.out.print(rs.getString(i));
+	        }
+	        System.out.println();
+	    }
 	}
 }
 
