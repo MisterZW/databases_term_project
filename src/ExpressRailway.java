@@ -1,7 +1,8 @@
+package src;
+
 import java.util.*;
 import java.sql.*;
 import java.sql.SQLException;
-//import com.jakewharton.fliptables.FlipTableConverters;
 
 public class ExpressRailway {
 
@@ -53,7 +54,7 @@ public class ExpressRailway {
 		while(true) {
 			System.out.println(menu);
 			System.out.print("Enter your choice: ");
-			String input = scan.next();
+			String input = scan.nextLine();
 			
 			switch(input) {
 			case "1":
@@ -99,9 +100,9 @@ public class ExpressRailway {
 				System.exit(0);
 				break;
 			default:
-				break;	
-				
+				continue;
 			}
+			confirmContinue();
 		}
 		
 	}
@@ -110,6 +111,11 @@ public class ExpressRailway {
 		new ExpressRailway();
 	}
 
+	/* Confirm user wants to continue operations to avoid spamming menu after displaying results */
+	public void confirmContinue() {
+		System.out.println("--- Press enter to return to the menu ---");
+		scan.nextLine();
+	}
 
 	/* 
 	* gets an int value from user between min and max, inclusive 
@@ -125,6 +131,8 @@ public class ExpressRailway {
 		    }
 		    result = scan.nextInt();
 		} while (result < min || result > max);
+
+		scan.nextLine();
 		return result;
 	}
 
@@ -176,8 +184,13 @@ public class ExpressRailway {
 			ps.setString(6, city);
 			ps.setString(7, zip);
 			ResultSet rs = ps.executeQuery();
-			int newCustomerId =  ((Number) rs.getObject(1)).intValue();
-			System.out.printf("Success! %s's new ID # is %d\n", fname, newCustomerId);
+			if(rs.next()) {
+				int newCustomerId = rs.getInt(1);
+				System.out.printf("Success! %s's new ID # is %d\n", fname, newCustomerId);
+			}
+			else {
+				System.out.println("Sorry, there was a problem entering that user into the database.");
+			}
 			return true;
 		}
 		catch (SQLException e) {
@@ -221,7 +234,6 @@ public class ExpressRailway {
 			destination_station + ", " + target_day + ");";
 			ResultSet rs = st.executeQuery(query);
 			printResultSet(rs);
-			//System.out.println(FlipTableConverters.fromResultSet(rs));
 		}
 		catch (SQLException e) {
 			handleSQLException(e);
@@ -265,25 +277,15 @@ public class ExpressRailway {
 		}
 	}
 
+	/* Format query results appropriately for the user */
 	final public static void printResultSet(ResultSet rs) throws SQLException
 	{
-	    ResultSetMetaData rsmd = rs.getMetaData();
-	    int columnsNumber = rsmd.getColumnCount();
-	    while (rs.next()) {
-
-	    	for (int i = 1; i <= columnsNumber; i++) {
-				if (i > 1) System.out.print(" | ");
-				System.out.print(rsmd.getColumnName(i));
-			}
-
-			System.out.println();
-
-	        for (int i = 1; i <= columnsNumber; i++) {
-	            if (i > 1) System.out.print(" | ");
-	            System.out.print(rs.getString(i));
-	        }
-	        System.out.println();
-	    }
+	    if (!rs.isBeforeFirst() ) {    
+   			System.out.println("Your request returned no results."); 
+		} 
+		else {
+		    System.out.println(FlipTableConverters.fromResultSet(rs));
+		}
 	}
 }
 
