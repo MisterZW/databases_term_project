@@ -84,18 +84,13 @@ BEGIN
                 ELSE    get_station_ordinal(sched_rec.t_route, t.depart_station) BETWEEN dest_stat_ord AND arr_stat_ord
                 END;
 
-    BEGIN
     LOOP
         FETCH trip_cursor INTO trip_rec;
         IF NOT FOUND THEN
             EXIT;
         END IF;
-
         INSERT INTO BOOKING VALUES(agent_username, passenger_id, trip_rec.trip_id, num_tickets);
     END LOOP;
-    EXCEPTION WHEN integrity_constraint_violation
-        THEN ROLLBACK;
-    END;
 
 END;
 $$

@@ -85,6 +85,7 @@ public class ExpressRailway {
 				comboTripRouteSearch();
 				break;
 			case "6":
+				addReservation("agent1");
 				break;
 			case "7":
 				trainsThruStation();
@@ -306,6 +307,34 @@ public class ExpressRailway {
 				 sort_option, Boolean.toString(sort_asc), arrival_station, destination_station, target_day);
 			ResultSet rs = st.executeQuery(query);
 			printResultSet(rs);
+		}
+		catch (SQLException e) {
+			handleSQLException(e);
+		}
+	}
+
+
+	/*****************************************************************************************
+	* Make a reservation for all trips between arr_station and dest_station on a schedule
+	* Makes reservation as a transaction, so all bookings will fail if any one booking fails
+	*
+	* @param username -- The agent making the booking
+    *****************************************************************************************/
+	public void addReservation(String username) {
+		System.out.println("----Add Reservation----");
+		int passenger_id = getIntFromUser("For which passenger ID # would you like to book a reservation? --> ", 1, Integer.MAX_VALUE);
+		int target_schedule = getIntFromUser("For which schedule ID # would you like to book a reservation? --> ", 1, Integer.MAX_VALUE);
+		int num_tickets = getIntFromUser("How many tickets would you like to reserve? --> : ", 1, Integer.MAX_VALUE);
+		int arrival_station = getIntFromUser("Enter the arrival station ID #: ", 1, Integer.MAX_VALUE);
+		int destination_station = getIntFromUser("Enter the destination station ID #: ", 1, Integer.MAX_VALUE);
+
+		try {
+			Statement st = conn.createStatement();
+			String query = String.format("SELECT make_reservation('%s', %d, %d, %d, %d, %d);",
+				 username, passenger_id, target_schedule, num_tickets, arrival_station, destination_station);
+			st.executeQuery(query);
+			System.out.println( String.format("Reserved %d tickets for passenger %d on schedule %d between stations %d and %d",
+				num_tickets, passenger_id, target_schedule, arrival_station, destination_station) );
 		}
 		catch (SQLException e) {
 			handleSQLException(e);
