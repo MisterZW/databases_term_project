@@ -1,6 +1,7 @@
 package src;
 
 import java.util.*;
+import java.io.*;
 import java.sql.*;
 import java.sql.SQLException;
 
@@ -17,7 +18,8 @@ public class ExpressRailway {
 
 	private Connection conn;
 	private Properties props;
-	public static Scanner scan;
+	private static Scanner scan;
+	private ScriptRunner runner;
 
 	//TODO: catch database connection errors the constructor throws
 	public ExpressRailway() throws SQLException, ClassNotFoundException {
@@ -30,6 +32,9 @@ public class ExpressRailway {
 
 		conn = DriverManager.getConnection(url, props);
 
+		//autoCommit = false, stopOnError = true
+		runner = new ScriptRunner(conn, false, true);
+
 		UIMenu();
 	}
 
@@ -41,27 +46,27 @@ public class ExpressRailway {
 	public void UIMenu(){
 		scan = new Scanner(System.in);
 		String start = "--------Welcome to Express Railway---------\n\n"
-							+ "\t1. Log In";
+					+ "\t1. Log In";
 		
 		String menu = "--------Welcome to Express Railway---------\n\n"
-							+ "\t1. Add a new customer account\n"
-							+ "\t2. Edit a customer account\n"
-							+ "\t3. View customer account information\n"
-							+ "\t4. Single Route Trip Search\n"
-							+ "\t5. Combination Route Trip Search\n"
-							+ "\t6. Add Reservation\n"
-							+ "\t7. Find trains which pass through a specific station at a given time\n"
-							+ "\t8. Find routes which travel more than one rail line\n"
-							+ "\t9. Find routes which pass through the same stations but have different stops\n"
-							+ "\t10. Find stations that all trains pass through\n"
-							+ "\t11. Find all trains that do not stop at a specific station\n"
-							+ "\t12. Find routes that stop at at least a specified percentage of stations\n"
-							+ "\t13. Display the schedule of a route\n"
-							+ "\t14. Find the availability of a route at every stop on a specific day\n"
-							+ "\t15. Import Database\n"
-							+ "\t16. Export Database\n"
-							+ "\t17. Delete Database\n"
-							+ "\t18. Exit\n";
+					+ "\t1. Add a new customer account\n"
+					+ "\t2. Edit a customer account\n"
+					+ "\t3. View customer account information\n"
+					+ "\t4. Single Route Trip Search\n"
+					+ "\t5. Combination Route Trip Search\n"
+					+ "\t6. Add Reservation\n"
+					+ "\t7. Find trains which pass through a specific station at a given time\n"
+					+ "\t8. Find routes which travel more than one rail line\n"
+					+ "\t9. Find routes which pass through the same stations but have different stops\n"
+					+ "\t10. Find stations that all trains pass through\n"
+					+ "\t11. Find all trains that do not stop at a specific station\n"
+					+ "\t12. Find routes that stop at at least a specified percentage of stations\n"
+					+ "\t13. Display the schedule of a route\n"
+					+ "\t14. Find the availability of a route at every stop on a specific day\n"
+					+ "\t15. Import Database\n"
+					+ "\t16. Export Database\n"
+					+ "\t17. Delete Database\n"
+					+ "\t18. Exit\n";
 		
 		while(true) {
 			System.out.println(menu);
@@ -112,6 +117,7 @@ public class ExpressRailway {
 				findRouteAvailability();
 				break;
 			case "15":
+				importDatabase();
 				break;
 			case "16":
 				break;
@@ -526,6 +532,57 @@ public class ExpressRailway {
 		}
 		else {
 			System.out.println("Aborted database deletion.");
+		}
+	}
+
+
+	/* 
+	* Provides options to import small test, large test, or custom datasets
+	* WARNING -- this function allows the execution of arbitrary SQL code on the database!
+	*/
+	public void importDatabase() {
+		System.out.println("----Import Database----");
+		String importOptions = 	"1. Import small test dataset\n" +
+								"2. Import large test dataset\n" +
+								"3. Import custom dataset\n";
+
+		String filename = null;
+		while(filename == null) {
+
+			System.out.println(importOptions);
+			System.out.print("Enter your choice: ");
+			String input = scan.nextLine();
+
+			switch(input) {
+				case "1":
+					filename = "sql/small.sql";
+					break;
+				case "2":
+					filename = "sql/mock_data.sql";
+					break;
+				case "3":
+					filename = getStringFromUser("Enter the name of the file you would like to import: ");
+					break;
+				default:
+					System.out.println("Invalid option selected.");
+					continue;
+			}
+		}
+
+		System.out.println(String.format("You have selected filename: %s", filename) );
+
+		try {
+			conn.setAutoCommit(false);
+			FileReader dataReader = new FileReader(filename);
+			runner.runScript(dataReader);
+			conn.setAutoCommit(true);
+			System.out.println(String.format("%s has been imported successfully.", filename));
+		}
+		catch (SQLException e) {
+			handleSQLException(e);
+		}
+		catch (IOException e2) {
+			System.out.println("There was a problem executing your import script");
 		}
 	}
 
