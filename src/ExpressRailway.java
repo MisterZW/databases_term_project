@@ -105,14 +105,17 @@ public class ExpressRailway {
 				greaterThanPercentStops();
 				break;
 			case "13":
+				getRouteSchedule();
 				break;
 			case "14":
+				findRouteAvailability();
 				break;
 			case "15":
-				
+				break;
 			case "16":
 				break;
 			case "17":
+				dropDatabase();
 				break;
 			case "18":
 				scan.close();
@@ -327,8 +330,8 @@ public class ExpressRailway {
 
 		try {
 			Statement st = conn.createStatement();
-			String query = "SELECT * FROM trains_through_this_station('" +
-			target_time + "', " + target_day + ", " + target_station + ");";
+			String query = String.format("SELECT * FROM trains_through_this_station('%s', %d, %d);",
+				target_time, target_day, target_station);
 			ResultSet rs = st.executeQuery(query);
 			printResultSet(rs);
 		}
@@ -424,6 +427,76 @@ public class ExpressRailway {
 		}
 		catch (SQLException e) {
 			handleSQLException(e);
+		}
+	}
+
+
+	/* Display all schedules of a specified route for the week */
+	public void getRouteSchedule() {
+		System.out.println("----Display the schedule of a route----");
+
+		int target_route = getIntFromUser("Enter the route's ID #: ", 1, Integer.MAX_VALUE);
+		try {
+			Statement st = conn.createStatement();
+			String query = String.format("SELECT * FROM get_route_schedule(%d)", target_route);
+			ResultSet rs = st.executeQuery(query);
+			printResultSet(rs);
+		}
+		catch (SQLException e) {
+			handleSQLException(e);
+		}
+	}
+
+
+	/*************************************************************************************** 
+	* Find the availability of a route at every stop on a specific day and time
+	* Will only return trips which stop either at the depart or destination stations
+	***************************************************************************************/
+	public void findRouteAvailability() {
+		System.out.println("----Find the availability of a route at every stop on a specific day----");
+
+		int target_route = getIntFromUser("Enter the route's ID #: ", 1, Integer.MAX_VALUE);
+		int target_day = getIntFromUser("Enter the travel day: ", 1, 7);
+		int hour = getIntFromUser("Enter the travel hour: ", 0, 23);
+		int minute = getIntFromUser("Enter the travel minute: ", 0, 59);
+
+		String target_time = String.format("%02d:%02d:00", hour, minute);
+		try {
+			Statement st = conn.createStatement();
+			String query = String.format("SELECT * FROM find_route_availability(%d, %d, '%s')", 
+				target_route, target_day, target_time);
+			ResultSet rs = st.executeQuery(query);
+			printResultSet(rs);
+		}
+		catch (SQLException e) {
+			handleSQLException(e);
+		}
+	}
+
+
+	/* 
+	* Drops all data from all tables, but retains the database schema 
+	* Demands confirmation from the user before proceeding
+	*/
+	public void dropDatabase() {
+		System.out.println("----Delete Database----");
+
+		boolean confirmation = getBooleanFromUser("Are you sure you want to delete all the database information?\n" +
+			"It is likely that this action is unrecoverable. Continue anyway (Y/N)? --> ");
+
+		if(confirmation) {
+			try {
+			Statement st = conn.createStatement();
+			String query = String.format("SELECT drop_database();");
+			st.executeQuery(query);
+			System.out.println("All database records have been deleted.");
+			}
+			catch (SQLException e) {
+				handleSQLException(e);
+			}
+		}
+		else {
+			System.out.println("Aborted database deletion.");
 		}
 	}
 
