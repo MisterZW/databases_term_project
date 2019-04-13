@@ -19,6 +19,7 @@ public class ExpressRailway {
 	private Properties props;
 	public static Scanner scan;
 
+	//TODO: catch database connection errors the constructor throws
 	public ExpressRailway() throws SQLException, ClassNotFoundException {
 		Class.forName("org.postgresql.Driver");
 		String url = "jdbc:postgresql://localhost/zdw9";
@@ -32,6 +33,11 @@ public class ExpressRailway {
 		UIMenu();
 	}
 
+
+	/* 
+	* main user interface @ the command line
+	* runs as a loop which pauses for confirmation after successful operations
+	*/
 	public void UIMenu(){
 		scan = new Scanner(System.in);
 		String start = "--------Welcome to Express Railway---------\n\n"
@@ -48,8 +54,8 @@ public class ExpressRailway {
 							+ "\t8. Find routes which travel more than one rail line\n"
 							+ "\t9. Find routes which pass through the same stations but have different stops\n"
 							+ "\t10. Find stations that all trains pass through\n"
-							+ "\t11. Find all trains that does not stop at a specific station\n"
-							+ "\t12. Find routes that stop at a certain percent of stations\n"
+							+ "\t11. Find all trains that do not stop at a specific station\n"
+							+ "\t12. Find routes that stop at at least a specified percentage of stations\n"
 							+ "\t13. Display the schedule of a route\n"
 							+ "\t14. Find the availability of a route at every stop on a specific day\n"
 							+ "\t15. Import Database\n"
@@ -87,12 +93,16 @@ public class ExpressRailway {
 				moreThanOneRail();
 				break;
 			case "9":
+				sameStationsDiffStops();
 				break;
 			case "10":
+				stationsAllTrainsPassThrough();
 				break;
 			case "11":
+				trainsWhichDontGoHere();
 				break;
 			case "12":
+				greaterThanPercentStops();
 				break;
 			case "13":
 				break;
@@ -117,9 +127,11 @@ public class ExpressRailway {
 		
 	}
 
+
 	public static void main(String args[]) throws SQLException, ClassNotFoundException {
 		new ExpressRailway();
 	}
+
 
 	/* Confirm user wants to continue operations to avoid spamming menu after displaying results */
 	public void confirmContinue() {
@@ -127,58 +139,6 @@ public class ExpressRailway {
 		scan.nextLine();
 	}
 
-	/* 
-	* gets an int value from user between min and max, inclusive 
-	* prompts until a valid response is entered
-	*/
-	private int getIntFromUser(String prompt, int min, int max) {
-		int result;
-		do {
-		    System.out.print(prompt);
-		    while (!scan.hasNextInt()) {
-		        System.out.print("\n" + prompt);
-		        scan.next();
-		    }
-		    result = scan.nextInt();
-		} while (result < min || result > max);
-
-		scan.nextLine();
-		return result;
-	}
-
-	/* 
-	* gets an String from user of exactly length # of characters
-	* Need this to aquire, for example, valid ZIP and phone # 
-	* prompts until a valid response is entered
-	*/
-	private String getNlengthString(String prompt, int length) {
-		String result;
-		do {
-		    System.out.print(prompt);
-		    result = scan.nextLine();
-		} while (result.length() != length);
-		return result;
-	}
-
-	/* 
-	* gets a generic String from user
-	*/
-	private String getStringFromUser(String prompt) {
-		String result;
-		System.out.print(prompt);
-		result = scan.nextLine();
-		return result;
-	}
-
-	/* 
-	* gets true/false value from the user 
-	* maps inputs starting in 'Y' or 'y' to True and everything else to False
-	*/
-	private boolean getBooleanFromUser(String prompt) {
-		System.out.print(prompt);
-		String input = scan.nextLine();
-		return input.startsWith("Y") || input.startsWith("y");
-	}
 
 	/*
 	* Insert a new customer in to the system
@@ -269,6 +229,7 @@ public class ExpressRailway {
 		return false;
 	}
 
+
 	/*
 	* View customer data associated with a given customer's ID # in the database
 	*/
@@ -285,6 +246,7 @@ public class ExpressRailway {
 			handleSQLException(e);
 		}
 	}
+
 
 	/*******************************************************************************************
 	* Find all routes that stop at a specified arrival station and then at the specified
@@ -313,6 +275,7 @@ public class ExpressRailway {
 			handleSQLException(e);
 		}
 	}
+
 
 	/******************************************************************************************
 	* Combinatory search function: Find all route combinations that stop
@@ -346,6 +309,7 @@ public class ExpressRailway {
 		}
 	}
 
+
 	/********************************************************************
 	* Find all trains that pass through a specific station at a specific
 	* day/time combination: Find the trains that pass through a specific
@@ -373,12 +337,88 @@ public class ExpressRailway {
 		}
 	}
 
+
 	/* Find the routes that travel more than one rail line */
 	public void moreThanOneRail() {
 		System.out.println("----Find routes which travel more than one rail line----");
 		try {
 			Statement st = conn.createStatement();
 			String query = "SELECT * FROM more_than_one_rail()";
+			ResultSet rs = st.executeQuery(query);
+			printResultSet(rs);
+		}
+		catch (SQLException e) {
+			handleSQLException(e);
+		}
+	}
+
+
+	/********************************************************************************
+	* Find routes that pass through the same stations but don’t have the same stops:
+	* Find seemingly similar routes that differ by at least 1 stop.
+	********************************************************************************/
+	public void sameStationsDiffStops() {
+		System.out.println("----Find routes which pass through the same stations but have different stops----");
+		try {
+			Statement st = conn.createStatement();
+			String query = "SELECT * FROM same_stations_diff_stops()";
+			ResultSet rs = st.executeQuery(query);
+			printResultSet(rs);
+		}
+		catch (SQLException e) {
+			handleSQLException(e);
+		}
+	}
+
+
+	/********************************************************************************
+	* Find any stations that all the trains (that are in the system) pass at any
+	* time during an entire week.
+	********************************************************************************/
+	public void stationsAllTrainsPassThrough() {
+		System.out.println("----Find stations that all trains pass through----");
+		try {	
+			Statement st = conn.createStatement();
+			String query = "SELECT * FROM stations_all_trains_pass_through()";
+			ResultSet rs = st.executeQuery(query);
+			printResultSet(rs);
+		}
+		catch (SQLException e) {
+			handleSQLException(e);
+		}
+	}
+
+
+	/********************************************************************************
+	* Find all trains that do not stop at a specified station at any
+	* time during an entire week.
+	********************************************************************************/
+	public void trainsWhichDontGoHere() {
+		System.out.println("----Find all trains that do not stop at a specific station----");
+
+		int target_station = getIntFromUser("Enter the station's ID #: ", 1, Integer.MAX_VALUE);
+		try {
+			Statement st = conn.createStatement();
+			String query = String.format("SELECT * FROM trains_which_dont_go_here(%d)", target_station);
+			ResultSet rs = st.executeQuery(query);
+			printResultSet(rs);
+		}
+		catch (SQLException e) {
+			handleSQLException(e);
+		}
+	}
+
+	/********************************************************************************
+	* Find routes that stop at least at XX% of the Stations they visit:
+	* target_percent must be specified as a percentage between 10 and 90
+	********************************************************************************/
+	public void greaterThanPercentStops() {
+		System.out.println("----Find routes that stop at at least a specified percentage of stations----");
+
+		int target_percent = getIntFromUser("Enter the percentage as an integer (10 through 90): ", 10, 90);
+		try {	
+			Statement st = conn.createStatement();
+			String query = String.format("SELECT * FROM greater_than_percent_stops(%d)", target_percent);
 			ResultSet rs = st.executeQuery(query);
 			printResultSet(rs);
 		}
@@ -399,7 +439,7 @@ public class ExpressRailway {
 	}
 
 	/* Format query results appropriately for the user */
-	final public static void printResultSet(ResultSet rs) throws SQLException
+	public static void printResultSet(ResultSet rs) throws SQLException
 	{
 	    if (!rs.isBeforeFirst() ) {    
    			System.out.println("Your request returned no results."); 
@@ -408,21 +448,58 @@ public class ExpressRailway {
 		    System.out.println(FlipTableConverters.fromResultSet(rs));
 		}
 	}
-}
 
-/*
-	Statement st = conn.createStatement();
-	String query1 = "SELECT * FROM TRAIN";
-	ResultSet res1 = st.executeQuery(query1);
+	/* 
+	* gets an int value from user between min and max, inclusive 
+	* prompts until a valid response is entered
+	*/
+	private int getIntFromUser(String prompt, int min, int max) {
+		int result;
+		do {
+		    System.out.print(prompt);
+		    while (!scan.hasNextInt()) {
+		        System.out.print("\n" + prompt);
+		        scan.next();
+		    }
+		    result = scan.nextInt();
+		} while (result < min || result > max);
 
-	int train_id, top_speed, seats; 
-	double ppm;
-
-	while (res1.next()) {
-		train_id = res1.getInt("train_id");
-		top_speed = res1.getInt("top_speed");
-		seats = res1.getInt("seats");
-		ppm = res1.getDouble("ppm");
-		System.out.println("Train ID: " + train_id + " Top Speed: " + top_speed + " Seats: " + seats + " PPM " + ppm);
+		scan.nextLine();
+		return result;
 	}
-*/
+
+	/* 
+	* gets an String from user of exactly length # of characters
+	* Need this to aquire, for example, valid ZIP and phone # 
+	* prompts until a valid response is entered
+	*/
+	private String getNlengthString(String prompt, int length) {
+		String result;
+		do {
+		    System.out.print(prompt);
+		    result = scan.nextLine();
+		} while (result.length() != length);
+		return result;
+	}
+
+	/* 
+	* gets a generic String from user
+	*/
+	private String getStringFromUser(String prompt) {
+		String result;
+		System.out.print(prompt);
+		result = scan.nextLine();
+		return result;
+	}
+
+	/* 
+	* gets true/false value from the user 
+	* maps inputs starting in 'Y' or 'y' to True and everything else to False
+	*/
+	private boolean getBooleanFromUser(String prompt) {
+		System.out.print(prompt);
+		String input = scan.nextLine();
+		return input.startsWith("Y") || input.startsWith("y");
+	}
+
+}
