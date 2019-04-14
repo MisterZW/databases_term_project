@@ -16,6 +16,20 @@ public class ExpressRailway {
 											"4 -- Total Time\n" +
 											"5 -- Total Distance";
 
+	public final static String[] tableNames = {
+		"AGENT",
+		"RAIL_LINE",
+		"PASSENGER",
+		"TRAIN",
+		"STATION",
+		"TRAIN_ROUTE",
+		"CONNECTION",
+		"ROUTE_STATIONS",
+		"SCHEDULE",
+		"TRIP",
+		"BOOKING"
+	};
+
 	private Connection conn;
 	private Properties props;
 	private static Scanner scan;
@@ -120,6 +134,7 @@ public class ExpressRailway {
 				importDatabase();
 				break;
 			case "16":
+				exportDatabase();
 				break;
 			case "17":
 				dropDatabase();
@@ -584,6 +599,85 @@ public class ExpressRailway {
 		catch (IOException e2) {
 			System.out.println("There was a problem executing your import script");
 		}
+	}
+
+
+	/*********************************************************************************
+	* Export all data stored in database into a user-specified filepath
+	* Will export as the series of statements needed to reinstantiate that data
+	*
+	* not the most efficient storage, but should make it easier to import/export
+	*********************************************************************************/
+	public void exportDatabase() {
+		System.out.println("----Export Database----");
+		String filename = getStringFromUser("Enter the name of the file you would like to export to (will be appended with .sql): ");
+		FileWriter outputFile = null;
+		try {
+			File fileObj = new File(filename + ".sql");
+			if(!fileObj.exists())
+				fileObj.createNewFile();
+			else
+				throw new FileNotFoundException();
+			outputFile = new FileWriter (fileObj, true);
+		}
+		catch (IOException e2) {
+			System.out.println("There was a problem writing to the specified filepath.");
+			return;
+		}
+
+		try {
+			for (String tableName : tableNames) {
+				Statement st = conn.createStatement();
+				String query = String.format("SELECT * FROM %s;", tableName);
+				ResultSet result = st.executeQuery(query);
+				appendResultSetToFile(tableName, result, outputFile);
+				st.close();
+			}
+			System.out.println(String.format("The dataset has been exported to %s.sql successfully.", filename));
+			outputFile.close();
+		}
+		catch (SQLException e) {
+			handleSQLException(e);
+		}
+		catch (IOException e2) {
+			System.out.println("There was a problem exporting the database.");
+		}
+
+	}
+
+
+	/* Helper method which appends insert statements for a given table/ResultSet to the filewriter */
+	private static void appendResultSetToFile(String tableName, ResultSet rs, FileWriter fw) 
+		throws IOException, SQLException {
+		//skip tables with empty results
+		if (!rs.isBeforeFirst() ) {
+   			return;
+		}
+
+		fw.write("SELECT set_triggers(false);\n");
+
+		ResultSetMetaData rsmd = rs.getMetaData();
+		int numberOfColumns = rsmd.getColumnCount();
+		
+		while(rs.next()) {
+			String line = String.format("INSERT INTO %s VALUES(", tableName);
+
+			for(int i = 1; i <= numberOfColumns; i++) {
+				int dataType = rsmd.getColumnType(i);
+
+				String s = rs.getString(i);
+				if(dataType == Types.INTEGER || dataType == Types.NUMERIC)
+					line += s;
+				else
+					line += "'" + s + "'";
+				if(i != numberOfColumns)
+					line += ",";
+			}
+			line += ");\n";
+
+			fw.write(line);
+		}
+		fw.write("SELECT set_triggers(true);\n\n");
 	}
 
 

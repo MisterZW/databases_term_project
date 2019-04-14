@@ -798,6 +798,7 @@ BEGIN
     DELETE FROM RAIL_LINE CASCADE;
     DELETE FROM AGENT CASCADE;
 
+    -- resetting serials to 1 avoids breaking test data insert scripts --
     ALTER SEQUENCE connection_conn_id_seq RESTART WITH 1;
     ALTER SEQUENCE passenger_customer_id_seq RESTART WITH 1;
     ALTER SEQUENCE rail_line_rail_id_seq RESTART WITH 1;
@@ -807,6 +808,30 @@ BEGIN
     ALTER SEQUENCE train_route_route_id_seq RESTART WITH 1;
     ALTER SEQUENCE train_train_id_seq RESTART WITH 1;
     ALTER SEQUENCE trip_trip_id_seq RESTART WITH 1;
+END;
+$$
+LANGUAGE 'plpgsql';
+
+
+/* 
+* use this to temporarily disable and reenable triggers
+* needed to avoid duplicating trips when importing datasets which were
+* previously exported from the database
+*
+* If setting is true, turn triggers on
+* If setting if false, turn the triggers off
+ */
+CREATE OR REPLACE FUNCTION set_triggers(setting BOOLEAN)
+RETURNS VOID
+AS $$
+BEGIN
+    IF setting THEN
+        ALTER TABLE BOOKING ENABLE TRIGGER trig_sell_tickets;
+        ALTER TABLE SCHEDULE ENABLE TRIGGER sched_needs_trips;
+    ELSE
+        ALTER TABLE SCHEDULE DISABLE TRIGGER sched_needs_trips;
+        ALTER TABLE BOOKING DISABLE TRIGGER trig_sell_tickets;
+    END IF;
 END;
 $$
 LANGUAGE 'plpgsql';
