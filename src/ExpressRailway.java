@@ -1,6 +1,7 @@
 package src;
 
 import java.util.*;
+import java.io.*;
 import java.sql.*;
 import java.sql.SQLException;
 
@@ -15,9 +16,24 @@ public class ExpressRailway {
 											"4 -- Total Time\n" +
 											"5 -- Total Distance";
 
+	public final static String[] tableNames = {
+		"AGENT",
+		"RAIL_LINE",
+		"PASSENGER",
+		"TRAIN",
+		"STATION",
+		"TRAIN_ROUTE",
+		"CONNECTION",
+		"ROUTE_STATIONS",
+		"SCHEDULE",
+		"TRIP",
+		"BOOKING"
+	};
+
 	private Connection conn;
 	private Properties props;
-	public static Scanner scan;
+	private static Scanner scan;
+	private ScriptRunner runner;
 
 	//TODO: catch database connection errors the constructor throws
 	public ExpressRailway() throws SQLException, ClassNotFoundException {
@@ -30,6 +46,9 @@ public class ExpressRailway {
 
 		conn = DriverManager.getConnection(url, props);
 
+		//autoCommit = false, stopOnError = true
+		runner = new ScriptRunner(conn, false, true);
+
 		UIMenu();
 	}
 
@@ -40,25 +59,26 @@ public class ExpressRailway {
 	*/
 	public void UIMenu(){
 		scan = new Scanner(System.in);		
+
 		String menu = "--------Welcome to Express Railway---------\n\n"
-							+ "\t1. Add a new customer account\n"
-							+ "\t2. Edit a customer account\n"
-							+ "\t3. View customer account information\n"
-							+ "\t4. Single Route Trip Search\n"
-							+ "\t5. Combination Route Trip Search\n"
-							+ "\t6. Add Reservation\n"
-							+ "\t7. Find trains which pass through a specific station at a given time\n"
-							+ "\t8. Find routes which travel more than one rail line\n"
-							+ "\t9. Find routes which pass through the same stations but have different stops\n"
-							+ "\t10. Find stations that all trains pass through\n"
-							+ "\t11. Find all trains that do not stop at a specific station\n"
-							+ "\t12. Find routes that stop at at least a specified percentage of stations\n"
-							+ "\t13. Display the schedule of a route\n"
-							+ "\t14. Find the availability of a route at every stop on a specific day\n"
-							+ "\t15. Import Database\n"
-							+ "\t16. Export Database\n"
-							+ "\t17. Delete Database\n"
-							+ "\t18. Exit\n";
+					+ "\t1. Add a new customer account\n"
+					+ "\t2. Edit a customer account\n"
+					+ "\t3. View customer account information\n"
+					+ "\t4. Single Route Trip Search\n"
+					+ "\t5. Combination Route Trip Search\n"
+					+ "\t6. Add Reservation\n"
+					+ "\t7. Find trains which pass through a specific station at a given time\n"
+					+ "\t8. Find routes which travel more than one rail line\n"
+					+ "\t9. Find routes which pass through the same stations but have different stops\n"
+					+ "\t10. Find stations that all trains pass through\n"
+					+ "\t11. Find all trains that do not stop at a specific station\n"
+					+ "\t12. Find routes that stop at at least a specified percentage of stations\n"
+					+ "\t13. Display the schedule of a route\n"
+					+ "\t14. Find the availability of a route at every stop on a specific day\n"
+					+ "\t15. Import Database\n"
+					+ "\t16. Export Database\n"
+					+ "\t17. Delete Database\n"
+					+ "\t18. Exit\n";
 		
 		while(true) {
 			System.out.println(menu);
@@ -82,6 +102,7 @@ public class ExpressRailway {
 				comboTripRouteSearch();
 				break;
 			case "6":
+				addReservation("agent1");
 				break;
 			case "7":
 				trainsThruStation();
@@ -108,8 +129,10 @@ public class ExpressRailway {
 				findRouteAvailability();
 				break;
 			case "15":
+				importDatabase();
 				break;
 			case "16":
+				exportDatabase();
 				break;
 			case "17":
 				dropDatabase();
@@ -310,6 +333,34 @@ public class ExpressRailway {
 	}
 
 
+	/*****************************************************************************************
+	* Make a reservation for all trips between arr_station and dest_station on a schedule
+	* Makes reservation as a transaction, so all bookings will fail if any one booking fails
+	*
+	* @param username -- The agent making the booking
+    *****************************************************************************************/
+	public void addReservation(String username) {
+		System.out.println("----Add Reservation----");
+		int passenger_id = getIntFromUser("For which passenger ID # would you like to book a reservation? --> ", 1, Integer.MAX_VALUE);
+		int target_schedule = getIntFromUser("For which schedule ID # would you like to book a reservation? --> ", 1, Integer.MAX_VALUE);
+		int num_tickets = getIntFromUser("How many tickets would you like to reserve? --> : ", 1, Integer.MAX_VALUE);
+		int arrival_station = getIntFromUser("Enter the arrival station ID #: ", 1, Integer.MAX_VALUE);
+		int destination_station = getIntFromUser("Enter the destination station ID #: ", 1, Integer.MAX_VALUE);
+
+		try {
+			Statement st = conn.createStatement();
+			String query = String.format("SELECT make_reservation('%s', %d, %d, %d, %d, %d);",
+				 username, passenger_id, target_schedule, num_tickets, arrival_station, destination_station);
+			st.executeQuery(query);
+			System.out.println( String.format("Reserved %d tickets for passenger %d on schedule %d between stations %d and %d",
+				num_tickets, passenger_id, target_schedule, arrival_station, destination_station) );
+		}
+		catch (SQLException e) {
+			handleSQLException(e);
+		}
+	}
+
+
 	/********************************************************************
 	* Find all trains that pass through a specific station at a specific
 	* day/time combination: Find the trains that pass through a specific
@@ -495,6 +546,136 @@ public class ExpressRailway {
 		else {
 			System.out.println("Aborted database deletion.");
 		}
+	}
+
+
+	/* 
+	* Provides options to import small test, large test, or custom datasets
+	* WARNING -- this function allows the execution of arbitrary SQL code on the database!
+	*/
+	public void importDatabase() {
+		System.out.println("----Import Database----");
+		String importOptions = 	"1. Import small test dataset\n" +
+								"2. Import large test dataset\n" +
+								"3. Import custom dataset\n";
+
+		String filename = null;
+		while(filename == null) {
+
+			System.out.println(importOptions);
+			System.out.print("Enter your choice: ");
+			String input = scan.nextLine();
+
+			switch(input) {
+				case "1":
+					filename = "sql/small.sql";
+					break;
+				case "2":
+					filename = "sql/mock_data.sql";
+					break;
+				case "3":
+					filename = getStringFromUser("Enter the name of the file you would like to import: ");
+					break;
+				default:
+					System.out.println("Invalid option selected.");
+					continue;
+			}
+		}
+
+		System.out.println(String.format("You have selected filename: %s", filename) );
+
+		try {
+			conn.setAutoCommit(false);
+			FileReader dataReader = new FileReader(filename);
+			runner.runScript(dataReader);
+			conn.setAutoCommit(true);
+			System.out.println(String.format("%s has been imported successfully.", filename));
+		}
+		catch (SQLException e) {
+			handleSQLException(e);
+		}
+		catch (IOException e2) {
+			System.out.println("There was a problem executing your import script");
+		}
+	}
+
+
+	/*********************************************************************************
+	* Export all data stored in database into a user-specified filepath
+	* Will export as the series of statements needed to reinstantiate that data
+	*
+	* not the most efficient storage, but should make it easier to import/export
+	*********************************************************************************/
+	public void exportDatabase() {
+		System.out.println("----Export Database----");
+		String filename = getStringFromUser("Enter the name of the file you would like to export to (will be appended with .sql): ");
+		FileWriter outputFile = null;
+		try {
+			File fileObj = new File(filename + ".sql");
+			if(!fileObj.exists())
+				fileObj.createNewFile();
+			else
+				throw new FileNotFoundException();
+			outputFile = new FileWriter (fileObj, true);
+		}
+		catch (IOException e2) {
+			System.out.println("There was a problem writing to the specified filepath.");
+			return;
+		}
+
+		try {
+			for (String tableName : tableNames) {
+				Statement st = conn.createStatement();
+				String query = String.format("SELECT * FROM %s;", tableName);
+				ResultSet result = st.executeQuery(query);
+				appendResultSetToFile(tableName, result, outputFile);
+				st.close();
+			}
+			System.out.println(String.format("The dataset has been exported to %s.sql successfully.", filename));
+			outputFile.close();
+		}
+		catch (SQLException e) {
+			handleSQLException(e);
+		}
+		catch (IOException e2) {
+			System.out.println("There was a problem exporting the database.");
+		}
+
+	}
+
+
+	/* Helper method which appends insert statements for a given table/ResultSet to the filewriter */
+	private static void appendResultSetToFile(String tableName, ResultSet rs, FileWriter fw) 
+		throws IOException, SQLException {
+		//skip tables with empty results
+		if (!rs.isBeforeFirst() ) {
+   			return;
+		}
+
+		fw.write("SELECT set_triggers(false);\n");
+
+		ResultSetMetaData rsmd = rs.getMetaData();
+		int numberOfColumns = rsmd.getColumnCount();
+		
+		while(rs.next()) {
+			String line = String.format("INSERT INTO %s VALUES(", tableName);
+
+			for(int i = 1; i <= numberOfColumns; i++) {
+				int dataType = rsmd.getColumnType(i);
+
+				String s = rs.getString(i);
+				if(dataType == Types.INTEGER || dataType == Types.NUMERIC)
+					line += s;
+				else
+					line += "'" + s + "'";
+				if(i != numberOfColumns)
+					line += ",";
+			}
+			line += ");\n";
+
+			fw.write(line);
+		}
+		fw.write("SELECT set_triggers(true);\n\n");
 	}
 
 

@@ -84,18 +84,13 @@ BEGIN
                 ELSE    get_station_ordinal(sched_rec.t_route, t.depart_station) BETWEEN dest_stat_ord AND arr_stat_ord
                 END;
 
-    BEGIN
     LOOP
         FETCH trip_cursor INTO trip_rec;
         IF NOT FOUND THEN
             EXIT;
         END IF;
-
         INSERT INTO BOOKING VALUES(agent_username, passenger_id, trip_rec.trip_id, num_tickets);
     END LOOP;
-    EXCEPTION WHEN integrity_constraint_violation
-        THEN ROLLBACK;
-    END;
 
 END;
 $$
@@ -786,7 +781,6 @@ $$
 LANGUAGE 'plpgsql';
 
 
-
 /* Drops all data from all tables, but retains the database schema */
 CREATE OR REPLACE FUNCTION drop_database()
 RETURNS VOID
@@ -803,18 +797,41 @@ BEGIN
     DELETE FROM PASSENGER CASCADE;
     DELETE FROM RAIL_LINE CASCADE;
     DELETE FROM AGENT CASCADE;
+
+    -- resetting serials to 1 avoids breaking test data insert scripts --
+    ALTER SEQUENCE connection_conn_id_seq RESTART WITH 1;
+    ALTER SEQUENCE passenger_customer_id_seq RESTART WITH 1;
+    ALTER SEQUENCE rail_line_rail_id_seq RESTART WITH 1;
+    ALTER SEQUENCE route_stations_rs_id_seq RESTART WITH 1;
+    ALTER SEQUENCE schedule_sched_id_seq RESTART WITH 1;
+    ALTER SEQUENCE station_station_id_seq RESTART WITH 1;
+    ALTER SEQUENCE train_route_route_id_seq RESTART WITH 1;
+    ALTER SEQUENCE train_train_id_seq RESTART WITH 1;
+    ALTER SEQUENCE trip_trip_id_seq RESTART WITH 1;
 END;
 $$
 LANGUAGE 'plpgsql';
 
 
-/*
-* IMPORT AND EXPORT DATABASE COMMANDS TO BE LARGELY IMPLEMENTED IN PHASE 3
-* IT SHOULD BE POSSIBLE TO PIPE DATA THROUGH STDIN/STDOUT w/out admin access
+/* 
+* use this to temporarily disable and reenable triggers
+* needed to avoid duplicating trips when importing datasets which were
+* previously exported from the database
 *
-* EXPORT COULD ALTERNATIVELY BE DONE BY SIMPLY PERFORMING SELECT * ON EACH TABLE AND
-* DEALING WITH THE FILE I/O IN THE CLIENT APPLICATION
-*
-* IMPORT BY JUST GENERATING INSERT STATEMENTS FROM SAID FILES
-* 
-*/
+* If setting is true, turn triggers on
+* If setting if false, turn the triggers off
+ */
+CREATE OR REPLACE FUNCTION set_triggers(setting BOOLEAN)
+RETURNS VOID
+AS $$
+BEGIN
+    IF setting THEN
+        ALTER TABLE BOOKING ENABLE TRIGGER trig_sell_tickets;
+        ALTER TABLE SCHEDULE ENABLE TRIGGER sched_needs_trips;
+    ELSE
+        ALTER TABLE SCHEDULE DISABLE TRIGGER sched_needs_trips;
+        ALTER TABLE BOOKING DISABLE TRIGGER trig_sell_tickets;
+    END IF;
+END;
+$$
+LANGUAGE 'plpgsql';
