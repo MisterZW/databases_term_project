@@ -236,7 +236,7 @@ SELECT * FROM sort_CTRS(5, false, 1, 4, 1);
 
 -- INCLUDE TESTS TO VERIFY ROUTE SEARCH DOESN'T INCLUDE BOOKED ROUTES
 
-\echo 'OVERBOOKING SCHEDULE ID 2 ON TRIP ID 3 to see if STRS and CTRS exclude this option'
+\echo 'FULLY BOOKING SCHEDULE ID 2 ON TRIP ID 3 to see if STRS and CTRS exclude this option'
 INSERT INTO BOOKING (agent, passenger, trip, num_tickets)
 	VALUES ('agent0', 2, 3, 100);
 \echo '\n'

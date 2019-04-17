@@ -177,6 +177,13 @@ CREATE TABLE BOOKING (
 
     CONSTRAINT valid_num_tickets CHECK (num_tickets > 0)
 );
+
+CREATE INDEX schedule_routes_index on SCHEDULE(t_route);
+
+CREATE INDEX rs_routes_index on ROUTE_STATIONS(route_id);
+CREATE INDEX rs_stations_index on ROUTE_STATIONS(station_id);
+
+CREATE INDEX trip_schedules_index on TRIP(sched_id);
 DROP FUNCTION IF EXISTS create_trips() CASCADE;
 
 --BUILD TRACKING OF EACH LEG OF ACTIVE TRIPS DYNAMICALLY FROM SCHEDULE--
@@ -307,6 +314,7 @@ DECLARE
 BEGIN
 	SELECT DISTINCT * FROM TRIP as t WHERE t.trip_id = NEW.trip INTO trip_rec;
 
+--CONSTRAINT PREVENTS OVERBOOKING TRAINS--
 	IF NEW.num_tickets > trip_rec.seats_left
 	THEN
 		RAISE integrity_constraint_violation 

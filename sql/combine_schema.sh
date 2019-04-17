@@ -12,4 +12,5 @@ cat schedule.sql >> schema.sql
 cat trip.sql >> schema.sql
 cat booking.sql >> schema.sql
 
+cat indexes.sql >> schema.sql
 cat triggers.sql >> schema.sql
