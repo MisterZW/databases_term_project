@@ -39,10 +39,7 @@ public class ExpressRailway {
 	* runs as a loop which pauses for confirmation after successful operations
 	*/
 	public void UIMenu(){
-		scan = new Scanner(System.in);
-		String start = "--------Welcome to Express Railway---------\n\n"
-							+ "\t1. Log In";
-		
+		scan = new Scanner(System.in);		
 		String menu = "--------Welcome to Express Railway---------\n\n"
 							+ "\t1. Add a new customer account\n"
 							+ "\t2. Edit a customer account\n"
