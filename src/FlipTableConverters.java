@@ -97,9 +97,9 @@ public final class FlipTableConverters {
   }
 
   /** Create a table from a {@link ResultSet}. */
-  public static String fromResultSet(ResultSet resultSet) throws SQLException {
+  public static String fromResultSet(ResultSet resultSet, int max_results) throws SQLException {
     if (resultSet == null) throw new NullPointerException("resultSet == null");
-    if (!resultSet.isBeforeFirst()) throw new IllegalStateException("Result set not at first.");
+    // if (!resultSet.isBeforeFirst()) throw new IllegalStateException("Result set not at first.");
 
     List<String> headers = new ArrayList<>();
     ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
@@ -108,13 +108,16 @@ public final class FlipTableConverters {
       headers.add(resultSetMetaData.getColumnName(column + 1));
     }
 
+    int count = 0;
+
     List<String[]> data = new ArrayList<>();
-    while (resultSet.next()) {
+    while (count < max_results && resultSet.next()) {
       String[] rowData = new String[columnCount];
       for (int column = 0; column < columnCount; column++) {
         rowData[column] = resultSet.getString(column + 1);
       }
       data.add(rowData);
+      count++;
     }
 
     String[] headerArray = headers.toArray(new String[headers.size()]);

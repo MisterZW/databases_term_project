@@ -9,6 +9,7 @@ public class ExpressRailway {
 
 	public final static int ZIP_LENGTH = 5;
 	public final static int PHONE_NUMBER_LENGTH = 10;
+	public final static int PAGINATION_CONSTANT = 10;
 	public final static String sort_menu = 	"---- SORTING OPTIONS ----\n" +
 											"1 -- Number of Stops\n" +
 											"2 -- Number of Stations Passed\n" +
@@ -77,7 +78,7 @@ public class ExpressRailway {
 					+ "\t3. View customer account information\n"
 					+ "\t4. Single Route Trip Search\n"
 					+ "\t5. Combination Route Trip Search\n"
-					+ "\t6. Add Reservation\n"
+					+ "\t6. Add Reservation for a Single Route\n"
 					+ "\t7. Find trains which pass through a specific station at a given time\n"
 					+ "\t8. Find routes which travel more than one rail line\n"
 					+ "\t9. Find routes which pass through the same stations but have different stops\n"
@@ -162,7 +163,7 @@ public class ExpressRailway {
 	}
 
 
-	public static void main(String args[]) throws SQLException, ClassNotFoundException {
+	public static void main(String args[]) {
 		new ExpressRailway();
 	}
 
@@ -351,7 +352,7 @@ public class ExpressRailway {
 	* @param username -- The agent making the booking
     *****************************************************************************************/
 	public void addReservation(String username) {
-		System.out.println("----Add Reservation----");
+		System.out.println("----Add Reservation for a Single Route----");
 		int passenger_id = getIntFromUser("For which passenger ID # would you like to book a reservation? --> ", 1, Integer.MAX_VALUE);
 		int target_schedule = getIntFromUser("For which schedule ID # would you like to book a reservation? --> ", 1, Integer.MAX_VALUE);
 		int num_tickets = getIntFromUser("How many tickets would you like to reserve? --> : ", 1, Integer.MAX_VALUE);
@@ -370,6 +371,46 @@ public class ExpressRailway {
 			handleSQLException(e);
 		}
 	}
+
+
+	// /*******************************************************************************************
+	// * Make a reservation for all trips ids specified by the user (e.g., from a CTRS result)
+	// * Makes reservation as a transaction, so all bookings will fail if any one booking fails
+	// *
+	// * @param username -- The agent making the booking
+ //    *******************************************************************************************/
+	// public void addTripBookings(String username) {
+	// 	System.out.println("----Add Reservation for a Sequence of Trips----");
+	// 	int passenger_id = getIntFromUser("For which passenger ID # would you like to book a reservation? --> ", 1, Integer.MAX_VALUE);
+	// 	int num_tickets = getIntFromUser("How many tickets would you like to reserve? --> : ", 1, Integer.MAX_VALUE);
+
+	// 	List<Integer> tripList = getTrips();
+
+	// 	try {
+	// 		Statement st = conn.createStatement();
+	// 		String query = String.format("SELECT make_reservation('%s', %d, %d, %d, %d, %d);",
+	// 			 username, passenger_id, target_schedule, num_tickets, arrival_station, destination_station);
+	// 		st.executeQuery(query);
+	// 		System.out.println( String.format("Reserved %d tickets for passenger %d on schedule %d between stations %d and %d",
+	// 			num_tickets, passenger_id, target_schedule, arrival_station, destination_station) );
+	// 	}
+	// 	catch (SQLException e) {
+	// 		handleSQLException(e);
+	// 	}
+	// }
+
+
+	// /* Helper method gets the trip SQL insert statements the agent wants to book */
+	// private List<Integer> getTripInserts(int passenger_id, int num_tickets, String agent_name) {
+	// 	List<String> result = new ArrayList<Integer>();
+	// 	int nextTrip = -1;
+	// 	do {
+	// 		nextTrip = getIntFromUser("Enter next trip ID # to book (or -1 if finished adding trips) --> ", -1, Integer.MAX_VALUE);
+	// 		if(nextTrip > 0) {
+	// 			result.append(nextTrip);
+	// 		}
+	// 	} while (nextTrip > 0);
+	// }
 
 
 	/********************************************************************
@@ -700,16 +741,30 @@ public class ExpressRailway {
 		}
 	}
 
+
 	/* Format query results appropriately for the user */
-	public static void printResultSet(ResultSet rs) throws SQLException
+	public void printResultSet(ResultSet rs) throws SQLException
 	{
 	    if (!rs.isBeforeFirst() ) {    
    			System.out.println("Your request returned no results."); 
 		} 
 		else {
-		    System.out.println(FlipTableConverters.fromResultSet(rs));
+			boolean continueDisplayingResults;
+			int result_no = 1;
+			do {
+				System.out.printf("----Showing (up to) %d results, beginning with result %d----\n", 
+					PAGINATION_CONSTANT, result_no);
+		    	System.out.println(FlipTableConverters.fromResultSet(rs, PAGINATION_CONSTANT));
+		    	continueDisplayingResults = false;
+			    if(!rs.isAfterLast()) {
+			    	result_no += PAGINATION_CONSTANT;
+			    	continueDisplayingResults = getBooleanFromUser(
+			    		String.format("Would you like to see another %d results? (Y/N)  ", PAGINATION_CONSTANT));
+			    } 
+			} while (continueDisplayingResults);
 		}
 	}
+
 
 	/* 
 	* gets an int value from user between min and max, inclusive 
