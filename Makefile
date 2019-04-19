@@ -11,7 +11,7 @@ CLASSES = \
 	src/ScriptRunner.java \
 	src/ExpressRailway.java
 
-MAIN = ExpressRailway
+MAIN = src/ExpressRailway
 
 default: classes
 
