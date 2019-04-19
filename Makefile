@@ -1,9 +1,12 @@
-JFLAGS = -g
+JFLAGS = -cp
 JC = javac
 JVM = java
 .SUFFIXES: .java .class
 .java.class:
-	$(JC) $(JFLAGS) $*.java
+	$(JC) $*.java
+
+JARS = \
+	postgresql-42.1.3.jre6.jar:. \
 
 CLASSES = \
 	src/FlipTable.java \
@@ -17,8 +20,8 @@ default: classes
 
 classes: $(CLASSES:.java=.class)
 
-run: $(MAIN).class
-	$(JVM) $(MAIN)
+run:  $(MAIN).class
+	$(JVM) $(JFLAGS) $(JARS) $(MAIN)
 
 clean:
 	$(RM) src/*.class
