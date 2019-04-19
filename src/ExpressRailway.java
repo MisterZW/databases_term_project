@@ -35,19 +35,30 @@ public class ExpressRailway {
 	private static Scanner scan;
 	private ScriptRunner runner;
 
-	//TODO: catch database connection errors the constructor throws
-	public ExpressRailway() throws SQLException, ClassNotFoundException {
-		Class.forName("org.postgresql.Driver");
-		String url = "jdbc:postgresql://localhost/zdw9";
+	public ExpressRailway() {
 
-		props = new Properties();
-		props.setProperty("user","zdw9");
-		props.setProperty("password","example");
+		try {
+			Class.forName("org.postgresql.Driver");
+			String url = "jdbc:postgresql://localhost/zdw9";
 
-		conn = DriverManager.getConnection(url, props);
+			props = new Properties();
+			props.setProperty("user","zdw9");
+			props.setProperty("password","example");
 
-		//autoCommit = false, stopOnError = true
-		runner = new ScriptRunner(conn, false, true);
+			conn = DriverManager.getConnection(url, props);
+
+			//autoCommit = false, stopOnError = true
+			runner = new ScriptRunner(conn, false, true);
+		}
+		catch (ClassNotFoundException cnfe) {
+			System.out.println("Could not load the postgresql driver.\n" + 
+				"Try running the command 'make run' from the main directory.");
+			System.exit(1);
+		}
+		catch (SQLException e) {
+			handleSQLException(e);
+			System.exit(2);
+		}
 
 		UIMenu();
 	}
