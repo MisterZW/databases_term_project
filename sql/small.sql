@@ -12,6 +12,7 @@ INSERT INTO STATION VALUES('C Fake Street', 'C', '15219', '07:30:00', '22:00:00'
 INSERT INTO STATION VALUES('D Fake Street', 'D', '15220', '07:45:00', '22:30:00');
 
 INSERT INTO AGENT VALUES('agent0', '0');
+INSERT INTO AGENT VALUES('agent1', '1');
 
 INSERT INTO PASSENGER VALUES('pass_fname0', 'pass_lname0', 'passenger0@gmail.com', '0734446230', '123 Fake Street', 'Faketown', '15217');
 INSERT INTO PASSENGER VALUES('pass_fname1', 'pass_lname1', 'passenger1@gmail.com', '3341477783', '123 Fake Street', 'Faketown', '15217');

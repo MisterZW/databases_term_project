@@ -79,18 +79,19 @@ public class ExpressRailway {
 					+ "\t4. Single Route Trip Search\n"
 					+ "\t5. Combination Route Trip Search\n"
 					+ "\t6. Add Reservation for a Single Route\n"
-					+ "\t7. Find trains which pass through a specific station at a given time\n"
-					+ "\t8. Find routes which travel more than one rail line\n"
-					+ "\t9. Find routes which pass through the same stations but have different stops\n"
-					+ "\t10. Find stations that all trains pass through\n"
-					+ "\t11. Find all trains that do not stop at a specific station\n"
-					+ "\t12. Find routes that stop at at least a specified percentage of stations\n"
-					+ "\t13. Display the schedule of a route\n"
-					+ "\t14. Find the availability of a route at every stop on a specific day\n"
-					+ "\t15. Import Database\n"
-					+ "\t16. Export Database\n"
-					+ "\t17. Delete Database\n"
-					+ "\t18. Exit\n";
+					+ "\t7. Add Reservation for a Sequence of Trips\n"
+					+ "\t8. Find trains which pass through a specific station at a given time\n"
+					+ "\t9. Find routes which travel more than one rail line\n"
+					+ "\t10. Find routes which pass through the same stations but have different stops\n"
+					+ "\t11. Find stations that all trains pass through\n"
+					+ "\t12. Find all trains that do not stop at a specific station\n"
+					+ "\t13. Find routes that stop at at least a specified percentage of stations\n"
+					+ "\t14. Display the schedule of a route\n"
+					+ "\t15. Find the availability of a route at every stop on a specific day\n"
+					+ "\t16. Import Database\n"
+					+ "\t17. Export Database\n"
+					+ "\t18. Delete Database\n"
+					+ "\t19. Exit\n";
 		
 		while(true) {
 			System.out.println(menu);
@@ -117,39 +118,42 @@ public class ExpressRailway {
 				addReservation("agent1");
 				break;
 			case "7":
-				trainsThruStation();
+				addTripBookings("agent1");
 				break;
 			case "8":
-				moreThanOneRail();
+				trainsThruStation();
 				break;
 			case "9":
-				sameStationsDiffStops();
+				moreThanOneRail();
 				break;
 			case "10":
-				stationsAllTrainsPassThrough();
+				sameStationsDiffStops();
 				break;
 			case "11":
-				trainsWhichDontGoHere();
+				stationsAllTrainsPassThrough();
 				break;
 			case "12":
-				greaterThanPercentStops();
+				trainsWhichDontGoHere();
 				break;
 			case "13":
-				getRouteSchedule();
+				greaterThanPercentStops();
 				break;
 			case "14":
-				findRouteAvailability();
+				getRouteSchedule();
 				break;
 			case "15":
-				importDatabase();
+				findRouteAvailability();
 				break;
 			case "16":
-				exportDatabase();
+				importDatabase();
 				break;
 			case "17":
-				dropDatabase();
+				exportDatabase();
 				break;
 			case "18":
+				dropDatabase();
+				break;
+			case "19":
 				scan.close();
 				System.exit(0);
 				break;
@@ -373,44 +377,56 @@ public class ExpressRailway {
 	}
 
 
-	// /*******************************************************************************************
-	// * Make a reservation for all trips ids specified by the user (e.g., from a CTRS result)
-	// * Makes reservation as a transaction, so all bookings will fail if any one booking fails
-	// *
-	// * @param username -- The agent making the booking
- //    *******************************************************************************************/
-	// public void addTripBookings(String username) {
-	// 	System.out.println("----Add Reservation for a Sequence of Trips----");
-	// 	int passenger_id = getIntFromUser("For which passenger ID # would you like to book a reservation? --> ", 1, Integer.MAX_VALUE);
-	// 	int num_tickets = getIntFromUser("How many tickets would you like to reserve? --> : ", 1, Integer.MAX_VALUE);
+	/*******************************************************************************************
+	* Make a reservation for all trips ids specified by the user (e.g., from a CTRS result)
+	* Makes reservation as a transaction, so all bookings will fail if any one booking fails
+	*
+	* @param username -- The agent making the booking
+    *******************************************************************************************/
+	public void addTripBookings(String username) {
+		System.out.println("----Add Reservation for a Sequence of Trips----");
+		int passenger_id = getIntFromUser("For which passenger ID # would you like to book a reservation? --> ",
+			1, Integer.MAX_VALUE);
+		int num_tickets = getIntFromUser("How many tickets would you like to reserve? --> : ", 1, Integer.MAX_VALUE);
 
-	// 	List<Integer> tripList = getTrips();
+		List<String> inserts = getTripInserts(passenger_id, num_tickets, username);
 
-	// 	try {
-	// 		Statement st = conn.createStatement();
-	// 		String query = String.format("SELECT make_reservation('%s', %d, %d, %d, %d, %d);",
-	// 			 username, passenger_id, target_schedule, num_tickets, arrival_station, destination_station);
-	// 		st.executeQuery(query);
-	// 		System.out.println( String.format("Reserved %d tickets for passenger %d on schedule %d between stations %d and %d",
-	// 			num_tickets, passenger_id, target_schedule, arrival_station, destination_station) );
-	// 	}
-	// 	catch (SQLException e) {
-	// 		handleSQLException(e);
-	// 	}
-	// }
+		try {
+			conn.setAutoCommit(false);
+			for(String insert : inserts) {
+				Statement st = conn.createStatement();
+				st.execute(insert);			
+			}
+			conn.setAutoCommit(true);
+			if(inserts.isEmpty()) {
+				System.out.println( "Canceled insert because you did not enter any trips." );
+			}
+			else {
+				System.out.println( String.format("Reserved %d tickets for passenger %d",
+					num_tickets, passenger_id) );
+			}
+		}
+		catch (SQLException e) {
+			handleSQLException(e);
+		}
+	}
 
 
-	// /* Helper method gets the trip SQL insert statements the agent wants to book */
-	// private List<Integer> getTripInserts(int passenger_id, int num_tickets, String agent_name) {
-	// 	List<String> result = new ArrayList<Integer>();
-	// 	int nextTrip = -1;
-	// 	do {
-	// 		nextTrip = getIntFromUser("Enter next trip ID # to book (or -1 if finished adding trips) --> ", -1, Integer.MAX_VALUE);
-	// 		if(nextTrip > 0) {
-	// 			result.append(nextTrip);
-	// 		}
-	// 	} while (nextTrip > 0);
-	// }
+	/* Helper method gets the trip SQL insert statements the agent wants to book */
+	private List<String> getTripInserts(int passenger_id, int num_tickets, String agent_name) {
+		List<String> result = new ArrayList<String>();
+		int nextTrip = -1;
+		do {
+			nextTrip = getIntFromUser("Enter next trip ID # to book (or -1 if finished adding trips) --> ",
+				-1, Integer.MAX_VALUE);
+			if(nextTrip > 0) {
+				String nextSQLStatement = String.format("INSERT INTO BOOKING VALUES(" +
+					"'%s', %d, %d, %d);", agent_name, passenger_id, nextTrip, num_tickets);
+				result.add(nextSQLStatement);
+			}
+		} while (nextTrip > 0);
+		return result;
+	}
 
 
 	/********************************************************************

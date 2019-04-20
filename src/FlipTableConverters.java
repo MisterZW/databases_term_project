@@ -1,3 +1,9 @@
+/*******************************************************************************************
+* Adjustments to file for use with ExpressRailway:
+* Changed fromResultSet to allow paginated result display
+* Changed to the src package to allow easier build
+*******************************************************************************************/
+
 /*
  * Copyright 2014 Jake Wharton
  *
