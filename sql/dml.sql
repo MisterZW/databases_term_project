@@ -813,6 +813,25 @@ $$
 LANGUAGE 'plpgsql';
 
 
+--adjust serials to proper place in sequence after importing a custom database
+CREATE OR REPLACE FUNCTION fix_serials()
+RETURNS VOID
+AS $$
+BEGIN
+    PERFORM setval(pg_get_serial_sequence('CONNECTION', 'conn_id'), coalesce(max(conn_id),0) + 1, false) FROM CONNECTION;
+    PERFORM setval(pg_get_serial_sequence('PASSENGER', 'customer_id'), coalesce(max(customer_id),0) + 1, false) FROM PASSENGER;
+    PERFORM setval(pg_get_serial_sequence('RAIL_LINE', 'rail_id'), coalesce(max(rail_id),0) + 1, false) FROM RAIL_LINE;
+    PERFORM setval(pg_get_serial_sequence('ROUTE_STATIONS', 'rs_id'), coalesce(max(rs_id),0) + 1, false) FROM ROUTE_STATIONS;
+    PERFORM setval(pg_get_serial_sequence('SCHEDULE', 'sched_id'), coalesce(max(sched_id),0) + 1, false) FROM SCHEDULE;
+    PERFORM setval(pg_get_serial_sequence('STATION', 'station_id'), coalesce(max(station_id),0) + 1, false) FROM STATION;
+    PERFORM setval(pg_get_serial_sequence('TRAIN_ROUTE', 'route_id'), coalesce(max(route_id),0) + 1, false) FROM TRAIN_ROUTE;
+    PERFORM setval(pg_get_serial_sequence('TRAIN', 'train_id'), coalesce(max(train_id),0) + 1, false) FROM TRAIN;
+    PERFORM setval(pg_get_serial_sequence('TRIP', 'trip_id'), coalesce(max(trip_id),0) + 1, false) FROM TRIP;
+END;
+$$ 
+LANGUAGE 'plpgsql';
+
+
 /* 
 * use this to temporarily disable and reenable triggers
 * needed to avoid duplicating trips when importing datasets which were

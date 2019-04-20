@@ -628,11 +628,12 @@ public class ExpressRailway {
 								"3. Import custom dataset\n";
 
 		String filename = null;
+		String input = null;
 		while(filename == null) {
 
 			System.out.println(importOptions);
 			System.out.print("Enter your choice: ");
-			String input = scan.nextLine();
+			input = scan.nextLine();
 
 			switch(input) {
 				case "1":
@@ -655,7 +656,17 @@ public class ExpressRailway {
 		try {
 			conn.setAutoCommit(false);
 			FileReader dataReader = new FileReader(filename);
+			System.out.println("Importing the file data...");
 			runner.runScript(dataReader);
+
+			//need to fix serials (ID#s) so they don't collide with the newly imported data
+			if(input.equals("3")) {
+				System.out.println("Updating database SERIAL IDs...");
+				Statement s = conn.createStatement();
+				String query = String.format("SELECT fix_serials();");
+				s.execute(query);
+			}
+
 			conn.setAutoCommit(true);
 			System.out.println(String.format("%s has been imported successfully.", filename));
 		}
