@@ -4,7 +4,10 @@
 ## Project Folders
 
 ### Data
-This folder contains scripts and text files used to bootstrap the test data for the database.
+This folder contains scripts and text files used to bootstrap the test data for the database
+
+### Doc
+This folder contains the project documentation
 
 ### ER
 This folder contains the ER model used at the start of this project
